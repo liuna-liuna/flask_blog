@@ -1,0 +1,288 @@
+#
+# Flask 知识点
+#
+1. coding
+
+2. how to run
+    # on Windows, use export for Linux
+        (pweb) D:\workspace\pweb> set FLASK_APP=hello.py
+        (pweb) D:\workspace\pweb> flask run
+        # open http://127.0.0.1:5000/ in browser.
+        # http://127.0.0.1:5000/user/Dave
+
+        # 只接受运行flask的本机的连接
+        flask run
+
+        # 接受同一网络中的其他计算机发送的连接
+        flask run --host 0.0.0.0
+
+
+    set FLASK_DEBUG=1 doesn't work on Windows for following versions:
+        > flask --version
+        Python 3.6.4
+        Flask 1.1.1
+        Werkzeug 0.15.5
+
+3. architecture, diagram, mechanism
+3.0) overview
+    Flask: microframework, based on werkzeug and jinja2;
+           built-in wsgi.
+
+    data flow:
+            request comes in <- Request obj: a LocalProxy obj, in rqx_local_stack of LocalStack type,
+                                App obj:     a LocalProxy obj, in app_local_stack of LocalStack type,
+
+         -> route,           <- @app.route(url, method=..., ...)
+                                or app.url_map_rule(url, endpoint, function).
+
+         -> response
+
+    separate business logic and presentation logic:
+        business logic      <- view function
+        presentation logic  <- template
+
+
+
+
+
+3.1) globals (within threads, routines)
+    Flask 上下文全局变量：
+        current_app: 在应用上下文中使用，     当前应用的应用实例。
+        g:           。。。应用上下文。。。， 处理请求时 用作临时存储 的对象，每次请求都会重设这个变量。
+        request:     。。。请求上下文。。。， 请求对象，封装了客户端发出的HTTP请求中的内容。
+        session:     。。。请求上下文。。。， 用户会话，值为一个字典，存储请求之间需要“记住”的值。
+
+    request attributes and methods:
+        form, args, values（form和args的合集）,
+        cookies, headers, method（HEAD, OPTIONS方法由Flask自动处理）,
+        files, blueprint, endpoint（处理请求的Flask端点的名称，Flask把视图函数的名称用作路由端口的名字）,
+        scheme, host, remote_addr,
+        path, query_string, full_path(path和query_string的合集），
+            base_url, url（baseurl和query_string的合集）,
+        environ.
+        get_data(), get_json(), is_secure() （是否用HTTPS）。
+
+    request hook:
+        @before_request(...),
+        @before_first_request(...)： 可用来添加服务器初始化任务。
+        @after_request(...)：如果没有未处理的异常抛出，在每次请求之后运行。
+        @teardown_request(...)：即使有未处理的异常抛出，也在每次请求之后运行。
+    一般在 request hook 和 view function 之间用g来共享数据。
+    例如：before_request 中从数据库中加载已登录用户，并保存在g.user中，
+            在view function中可以通过g.user获取用户。
+
+    view function and make_response(...) returns a response object.
+    response attributes and methods:
+        status_code, headers, content_length, content_type,
+        set_cookie(), delete_cookie(), set_data(), get_data().
+    Example:
+        @app.route('/')
+        def index():
+            return '<h1>Bad request</h1>'
+
+            # or
+            return '<h1>Bad request</h1>', 400
+
+            # or
+            from flask import make_response
+            response = make_response('<h1>This document carries a cookie!</h1>')
+            response.set_cookie('answer', '42')
+            return response
+
+    response的快捷方式：redirct(...), abort(...); abort不会把控制权交还给调用它的函数，而是抛出异常。
+    Example：
+        from flask import redirect
+
+        @app.route('/')
+        def index():
+            return redirect('http://www.example.com')
+
+        from flask import abort
+
+        @app.route('/user/<id>')
+        def get_user(id):
+            user = load_user(id)
+            if not user:
+                abort(404)
+            return '<h1>Hello, {}</h1>'.format(user.name)
+
+
+3.2) configuration
+
+
+3.3) route
+    dynamic routing
+
+3.4) template
+    template:        a file including static part and dynamic part (placeholder).
+    template engine: jinja2.
+    render:          the process to replace placeholder using value, return response.
+
+    jinja2 可以识别出所有类型的变量，包括列表、字典和对象。
+        <p>A value from a dictionary: {{ mydict['key'] }}.</p>
+        <p>A value from a list: {{ mylist[3] }}.</p>
+        <p>A value from a list, with a variable index: {{ mylist[myintvar] }}.</p>
+        <p>A value from an object's method: {{ myobj.somemethod() }}.</p>
+
+    jinja2 过滤器：
+        Hello, {{ name|capitalize }}
+
+        safe（渲染值时不转义。默认Jinja2会转义，为了安全考虑，例如<h1>转义为&lt;h1&gt;）,
+        capitalize, lower, upper, title（每个单词首字母大写）, trim, striptags（把HTML标签删掉）.
+
+        ！！不要在不可信的值上用safe，例如用户在表单中输入的文本！！
+
+    template 支持if, for, macro定义和使用， import, 继承via block, extends, super()。
+
+3.5) blueprint
+3.6) authentication
+3.7) database connection
+3.8) security
+3.9) test
+3.10) distribution
+
+3.11) extension
+    flask-bootstrap: Bootstrap是twitter开源的一个用于开发web的客户端框架，提供用户界面组件，兼容桌面和移动浏览器。
+                        服务器只是提供引用了CSS、Javascript的response，
+                              并在HTML、CSS、Javascript代码中实例化所需的用户界面元素。
+
+
+
+
+
+
+
+#
+# Flask 启动、和其他工具的集成
+#
+1. 1）Nginx、Gunicorn 和 Flask 的关系
+Nginx：  处理静态文件，可以缓存一些动态内容，反向代理，负载均衡，对恶意访问加黑名单等等；
+
+Gunicorn：Python实现的网关，实现了 Web Server Gateway Interface (WSGI),
+          擅长于管理多进程，有进程挂了Gunicorn可以再拉起来、防止服务器长时间停止服务，
+          还可以动态调整worker数量，请求多的时候增加worker的数量、请求少的时候减少，
+          这就是所谓的pre-fork模型。
+
+Flask：  内置了一个webserver，给开发者用的；
+        不适合生产环境用、单进程(用不了多核）、难扩展（失败了就挂掉）。
+
+生产环境中常用的部署：
+    多Nginx + 多Gunicorn + Flask App，Gunicorn用supervisor管理。
+
+
+# ref: https://www.zhihu.com/question/297267614 https://www.zhihu.com/question/297267614
+# ref: 使用了Gunicorn或者uWSGI,为什么还需要Nginx？https://www.zhihu.com/question/30560394
+
+2）gunicorn 配置 nginx
+    譬如in /etc/nginx/sites-enabled/wepub:
+        server {
+            listen 80;
+            root /www/demo;
+            server_name example.org;
+
+            location / {
+                proxy_pass http://127.0.0.1:8000;   # 转发gunicorn的运行地址
+            }
+        }
+
+    另外可以扩展反向代理部分：
+        location / {
+            proxy_pass  http://localhost:8000/; # 转发gunicorn的运行地址
+            proxy_redirect off;
+
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+     静态文件：
+        location ~ ^\/static\/.*$ {
+            root /www/demo；
+        }
+
+# ref: uWSGI和Gunicorn对比实践笔记 https://zhuanlan.zhihu.com/p/50857407
+
+3）用supervisor运行一个program
+    # install
+    sudo apt-get install supervisor
+
+    # 创建配置文件 /etc/supervisor/conf.d/demo.conf
+    [program:demo]
+    command=/www/demo/venv/bin/gunicorn -c /pushy/blog/gconfig.py run:app
+    directory=/www/demo     # 项目目录
+    user=root
+    autorestart=true
+    startretries=3
+
+    # 保存配置文件以后，需要更新配置文件
+    supervisorctl update
+
+    # 启动demo进程
+    supervisorctl start demo
+
+
+
+
+
+
+
+
+# ref: supervisor的安装与简单介绍 https://www.cnblogs.com/Dicky-Zhang/p/6171954.html
+# ref: supervisor详解 https://www.cnblogs.com/shijingjing07/p/9395110.html
+
+
+
+
+#
+# 2。Gunicorn 知识点
+#
+WSGI HTTP 服务器，pre-fork worker模式：擅长于管理多进程，所以提升了服务器处理负载的能力。
+
+# install
+apt-get install gunicorn
+# or
+pip install gunicorn
+
+# start
+gunicorn -w 2 -b 0.0.0.0:8000 test:application
+# or
+gunicorn -c gunicorn.conf.py test:application
+
+# simple wsgi interface example in test.py
+def application(environ, start_response):
+    start_response('200 OK', [('Content-Type', 'text/html'])
+    return b'<h1>Hello, web!</h1>'
+
+    -w worker 数量，推荐 num_of_cpu_cores * 2 + 1,
+    -b bind，与指定的socket进行绑定，
+    -k WorkerClass, 工作进程类型，包括 sync(default), gevent, eventlet, tornado, gtheread, gaiohttp.
+    -c Config，配置文件，一个.py文件，可以实现复杂的逻辑。
+
+# example of gunicorn.conf.py
+    from gevent import monkey
+    monkey.patch_all()
+    import multiprocessing
+    debug = True
+    loglevel = 'debug'
+    bind = '127.0.0.1:5000'     # 绑定与 Nginx 通信的端口
+    pidfile = 'log/gunicorn.pid'
+    logfile = 'log/debug.log'
+    workers = multiprocessing.cpu_count() * 2 + 1
+    worker_class = 'gevent'     # 默认是sync，阻塞模式，最好选择gevent模式
+
+
+
+
+
+
+# ref: Gunicorn使用详解 https://www.cnblogs.com/shijingjing07/p/9110619.html
+# ref: nginx+uwsgi 和nginx+gunicorn区别、如何部署 https://www.jianshu.com/p/be2b587a900e
+# ref: 深入理解uwsgi和gunicorn网络模型 https://blog.csdn.net/shudaqi2010/article/details/71172683
+
+#
+# 3. Flask 原理、语法
+#
+
+
+# ref: Flask源码解析:Flask应用执行流程及原理 https://www.cnblogs.com/weihengblog/p/9490561.html
+
+
