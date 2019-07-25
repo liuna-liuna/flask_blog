@@ -149,16 +149,51 @@
 3.10) distribution
 
 3.11) extension
-    Flask-Bootstrap: Bootstrap是twitter开源的一个用于开发web的客户端框架，提供用户界面组件，兼容桌面和移动浏览器。
+    A) Flask-Bootstrap: Bootstrap是twitter开源的一个用于开发web的客户端框架，提供用户界面组件，兼容桌面和移动浏览器。
                         服务器只是提供引用了CSS、Javascript的response，
                               并在HTML、CSS、Javascript代码中实例化所需的用户界面元素。
-                    pip install flask-bootstrap
-    其 boostrap/base.html中，定义了如下block：
-        doc, html, html_attribs, head, title, metas（一组meta标签）,
-        styles（CSS声明）, body, body_attribs, body, navbar, content, scripts（文档底部的JavaScript声明）.
 
+        pip install flask-bootstrap
+        其 boostrap/base.html中，定义了如下block：
+            doc, html, html_attribs, head, title, metas（一组meta标签）,
+            styles（CSS声明）, body, body_attribs, body, navbar, content, scripts（文档底部的JavaScript声明）.
 
+         Usage example:
+            # in hello.py
+            from flask-bootstrap import Bootstrap
+            bootstrap = Bootstrap(app)
 
+            # in templates/base.html
+            {% extends bootstrap/base.html %}
+
+    B) Flask-Moment：Moment.js 是一个优秀的 JavaScript 开发的在客户端浏览器中渲染日期和时间的开源库，
+                     Flask-Moment 是一个Flask扩展，能简化把 Moment.js 集成到 Jinja2模板中的过程。
+                     Flask-Moment 依赖于 Moment.js, jQuery.js。jQuery.js 在 Bootstrap 中已引入。
+                     Flask-Moment 实现了 Moment.js 中的 format(), fromNow(), fromTime(), calendar(), valueOf()
+                                  和 unix() 等方法。
+                     Flask-Moment 假定服务器端应用处理的时间戳是“纯正的”datetime对象，且使用UTC表示。
+
+        pip install flask-moment
+        Usage example:
+            # in hello.py
+            from datetime import datetime
+            from flask-moment import Moment
+            moment = Moment(app)
+
+            @app.route('/')
+            def index():
+                return render_template('index.html', current_time=datetime.utcnow())
+
+            # in templates/base.html
+            {% block scripts %}
+            {{ super() }}
+            {{ moment.include_moment() }}
+            {{ moment.locale('zh-cn') }}       # add locale language support, zh-cn: Chinese, es: Spanish
+            {% endblock %}
+
+            # in templates/index.html
+            <p>The local date and time is {{ moment(current_time).format('LLL') }}.</p>
+            <p>That was {{ moment(current_time).fromNow(refresh=True) }}.</p>
 
 
 
