@@ -142,9 +142,18 @@
 3.10) distribution
 
 3.11) extension
-    flask-bootstrap: Bootstrap是twitter开源的一个用于开发web的客户端框架，提供用户界面组件，兼容桌面和移动浏览器。
+    Flask-Bootstrap: Bootstrap是twitter开源的一个用于开发web的客户端框架，提供用户界面组件，兼容桌面和移动浏览器。
                         服务器只是提供引用了CSS、Javascript的response，
                               并在HTML、CSS、Javascript代码中实例化所需的用户界面元素。
+                    pip install flask-bootstrap
+    其 boostrap/base.html中，定义了如下block：
+        doc, html, html_attribs, head, title, metas（一组meta标签）,
+        styles（CSS声明）, body, body_attribs, body, navbar, content, scripts（文档底部的JavaScript声明）.
+
+
+
+
+
 
 
 
