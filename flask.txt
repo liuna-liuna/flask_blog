@@ -144,11 +144,15 @@
 3.5) blueprint
 3.6) authentication
 3.7) database connection
-3.8) security
-3.9) test
-3.10) distribution
 
-3.11) extension
+3.8) flash(...), get_flashed_messages()
+
+3.9) security
+
+3.10) test
+3.11) distribution
+
+3.12) extension
     A) Flask-Bootstrap: Bootstrap是twitter开源的一个用于开发web的客户端框架，提供用户界面组件，兼容桌面和移动浏览器。
                         服务器只是提供引用了CSS、Javascript的response，
                               并在HTML、CSS、Javascript代码中实例化所需的用户界面元素。
@@ -245,6 +249,71 @@
 
             {{ wtf.quick_form(form) }}
             <p></p>
+
+    D) Flask-SQLAlchemy: SQLAlchemy 是一个强大的关系型数据库框架，支持多种数据库后台。
+                         Object Relationship Mapping (ORM) 包。
+                         SQLAlchemy 提供了高层ORM的功能，也提供了原生SQL的底层功能。
+
+        Flask-SQLAlchemy 简化了 SQLAlchemy 在 Flask 中的应用。
+        在 Flask-SQLAlchemy 中，数据库使用URL指定，如：
+            MySQL:                  mysql://username:password@hostname/database
+            Postgres:               postgresql://username:password@hostname/database
+            SQLite (Linux, MacOS):  sqlite:///absolute/path/to/database
+            SQLite (Windows):       sqlite:///c:/absolute/path/to/database
+        此 URL 必须保存到 Flask 配置对象的 SQLALCHEMY_DATABASE_URI 键中。
+        而且， SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+        常用的SQLAlchemy列类型：
+            Integer, SmallInteger, BigInteger, Float, Numeric,
+            String, Text, Unicode, UnicodeText,
+            Boolean, Date, Time, DateTime, Interval （对应Python中的datetime.timedelta），
+            Enum （对应Python中的str，一组字符串）,
+            PickleType （对应Python中的任何Python对象，自动使用Pickle序列化）,
+            LargeBinary （对应Python中的str，二进制blob）。
+        常用的SQLAlchemy列选项：
+            primary_key, unique, index, nullable, default.
+        常用的SQLAlchemy关系选项，用在函数 db.relationship(...) 中：
+            backref, primaryjoin, lazy, uselist（一对一时可设为False）, order_by, secondary, secondaryjoin.
+
+        Usage Example 1.
+            # in hello.py
+            ...
+
+            # in Terminal
+            export FLASK_APP=hello.py
+            flask shell
+            >>> from hello import db
+                db.drop_all()
+                db.create_all()
+                from hello import Role, User
+                admin_role = Role(name='Admin')
+                mod_role = Role(name='Moderator')
+                user_role = Role(name='User')
+                user_john = User(username='john', role=admin_role)
+                user_susan = User(username='susan', role=user_role)
+                user_david = User(username='david', role=user_role)
+                # db.session.add(admin_role)
+                # db.session.delete(admin_role)
+                db.session.add_all([admin_role, mod_role, user_role, user_john, user_susan, user_david])
+                db.session.commit()  # or db.session.rollback()
+                print(admin_role.id)
+                print(mod_role.id)
+                print(user_role.id)
+
+                Role.query.all()
+                User.query.all()
+
+
+
+        MangoEngine 是 Object Document Mapping (ODM) 包。
+
+        SQL数据库：关系型数据库，主键、外键、关系、实体、实体-关系图、表，记录。。。；
+                    采用ACID范式；
+        NoSQL数据库：如文档数据库、键-值对数据库，集合（==表）、文档（==记录）。。。；
+                    减少了表、但是数据重复；
+                    放宽了对ACID范式的要求。
+
+        pip install flask-sqlalchemy
 
 
 
