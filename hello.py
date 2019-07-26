@@ -15,7 +15,7 @@ __VERSION__ = "1.0.0.07222019"
 
 
 # imports
-from flask import Flask, render_template, redirect, url_for, session
+from flask import Flask, render_template, redirect, url_for, session, flash
 from flask_bootstrap import Bootstrap
 from flask_moment import Moment
 from datetime import datetime
@@ -38,8 +38,10 @@ app.config['SECRET_KEY'] = 'hard to guess string placeholder'
 def index():
     form = NameForm()
     if form.validate_on_submit():
-        session['name'] = form.name.data
-        form.name.data = ''
+        old_name = session.get('name')
+        if old_name is not None and old_name != form.name.data:
+            flash('Looks like you changed a name!')
+            session['name'] = form.name.data
         return redirect(url_for('.index'))
     else:
         return render_template('index.html', current_time=datetime.utcnow(), form=form, name=session.get('name'))
