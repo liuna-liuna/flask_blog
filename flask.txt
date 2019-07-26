@@ -196,7 +196,55 @@
             <p>That was {{ moment(current_time).fromNow(refresh=True) }}.</p>
 
 
+    C) Flask-WTF：创建Web表单等，这个扩展对独立的 WTForms 包进行了包装，方便集成到Flask应用中。
+                    WTForms 包本身可与多个框架集成。
 
+            pip install flask-wtf
+
+            app.config['SECRET_KEY'] is needed to protect against CrossSiteRequestForgery (CSRF) attack,
+                and Flask generates token for each form and stores into session.
+
+        WTForms 支持的HTML标准字段：
+            BooleanField, HiddenField, PasswordField, DateField, DateTimeField,
+            FileField, MutileFileField, DecimalField, IntegerField, FloatField,
+            StringField, TextAreaField, RadioField, SelectField, SelectMultipleField,
+            FieldList, FormField, SubmitField.
+
+        WTForms 内建的验证函数：
+            InputRequired （确保转换类型前字段中有数据）， DataRequired （确保转换类型后字段中有数据），
+            URL, UUID, Email, IPAddress, MacAddress, EqualTo, Length, NumberRange, Regexp,
+            Optional （允许字段中没有输入，将跳过其他验证函数）, AnyOf, NoneOf.
+
+        手动处理、渲染 forms 需要重复coding，用 bootstrap 的wtf.quickform(form)。
+
+        Usage example:
+            # in hello.py
+            from flask import Flask, render_template, redirect, url_for
+            from flask_wtf import FlaskForm
+            from wtforms import StringField, SubmitField
+            from wtforms.validators import DataRequired
+
+            app.config['SECRET_KEY'] = '...'
+
+            class NameForm(FlaskForm):
+                name = StringField('What is your name?', validators=[DataRequired()])
+                submit = SubmitField('Submit')
+
+            @app.route('/', methods=['GET', 'POST'])
+            def index():
+                name, form = None, NameForm()
+                if form.validate_on_submit():
+                    name = form.name.data
+                    form.name.data = ''
+                    return redirect(url_for('.index'))
+                else:
+                    return render_template('index.html', current_time=datetime.utcnow(), form=form, name=name)
+
+            # in templates/index.html
+            {% import "bootstrap/wtf.html" as wtf %}
+
+            {{ wtf.quick_form(form) }}
+            <p></p>
 
 
 
