@@ -275,7 +275,7 @@
         常用的SQLAlchemy关系选项，用在函数 db.relationship(...) 中：
             backref, primaryjoin, lazy, uselist（一对一时可设为False）, order_by, secondary, secondaryjoin.
 
-        Usage Example 1.
+        Usage Example 1. 增删改查
             # in hello.py
             ...
 
@@ -302,6 +302,37 @@
 
                 Role.query.all()
                 User.query.all()
+
+                query 过滤器：
+                    filter(), filter_by(), order_by(), group_by(), limit(), offset()
+
+                query 执行方法：
+                    all(), first(), first_or_404(), get(), get_or_404(), count(), paginate()
+
+                user_role = Role.query.filter_by(name='User').first()
+                User.query.filter_by(role=user_role).all()
+
+                # str(...) 返回SQLAlchemy为查询生成的SQL查询语句。
+                print(str(User.query.filter_by(role=user_role))
+
+                关系与查询的处理方式类似，同时，
+                    执行user_role.users，隐式的查询会调用all()方法，返回一个用户列表。
+                    修改关系的设置加入 lazy='dynamic'，从而禁止自动执行查询，
+                        此时 user_role.users将返回一个尚未执行的查询，因此可以在其上添加过滤器。
+
+                >>> users = user_role.users
+                >>> users
+                [<User susan>, <User david>]
+                >>> users[0].role
+                <Role User>
+
+                # lazy='dynamic'以后，关系上可以添加过滤器
+                user_role.users[0] # still works
+                user_role.users.order_by(User.username).all()
+                user_role.users.count()
+
+
+
 
 
 
