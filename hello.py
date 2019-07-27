@@ -25,6 +25,7 @@ from wtforms.validators import DataRequired
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_mail import Mail, Message
+from threading import Thread
 import os
 
 app = Flask(__name__)
@@ -91,6 +92,10 @@ def internal_server_error(e):
 def make_shell_context():
     return dict(db=db, User=User, Role=Role)
 
+def send_mail_async(app, msg):
+    with app.app_context():
+        mail.send(msg)
+
 # send an email via Gmail SMTP server
 def send_mail(to, subject, template, **kwargs):
     msg = Message('{}{}'.format(app.config['NA_BLOG_SUBJECT_PREFIX'], subject),
@@ -98,8 +103,9 @@ def send_mail(to, subject, template, **kwargs):
                   recipients=[to])
     msg.body = render_template('{}.txt'.format(template), **kwargs)
     msg.html = render_template('{}.html'.format(template), **kwargs)
-    mail.send(msg)
-
+    t = Thread(target=send_mail_async, args=[app, msg])
+    t.start()
+    return t
 
 # classes
 class NameForm(FlaskForm):
