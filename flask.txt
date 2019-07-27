@@ -331,11 +331,6 @@
                 user_role.users.order_by(User.username).all()
                 user_role.users.count()
 
-
-
-
-
-
         MangoEngine 是 Object Document Mapping (ODM) 包。
 
         SQL数据库：关系型数据库，主键、外键、关系、实体、实体-关系图、表，记录。。。；
@@ -345,6 +340,33 @@
                     放宽了对ACID范式的要求。
 
         pip install flask-sqlalchemy
+
+    E) Flask-Migrate：数据库迁移。数据库迁移工具能跟踪数据库模式的变换，然后以增量的方式把变化应用到数据库中。
+        Flask中两种方法：1. 直接用 Alembic （Alembic：蒸馏器）这个迁移框架；
+                         2. 用Flask-Migrate扩展，这个扩展时对Alemic的轻量级包装，并与flask命令做了集成。
+
+        Flask-SQLAlchemy 在只有数据库表不存在时，才会根据模型创建。
+            所以如果有数据库模型的更改，即表结构的改动，需要先删除旧表，但会丢失数据，
+            所以最好用Flask-Migrate来更新表。
+
+        用 Flask-Migrate 管理数据库模型变化的步骤如下：
+        （1）对模型做必要的修改；
+        （2）执行 flask db migrate 命令，自动创建一个迁移脚本；
+        （3）检查自动生成的脚本，根据对模型的实际改动进行调整；
+        （4）把迁移脚本纳入版本控制；
+        （5）执行 flask db upgrade 命令，把迁移应用到数据库中。
+        如果前一个迁移还没提交，运行 flask db downgrade， 再重复上述步骤。
+
+        pip install flask-migrate
+
+        flask db init
+        flask db migrate
+        flask db upgrade
+        flask db downgrade
+        flask db stamp
+
+
+
 
 
 
