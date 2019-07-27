@@ -24,21 +24,30 @@ from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_mail import Mail, Message
 import os
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 # configuration
-app.config['SECRET_KEY'] = 'hard to guess string placeholder'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///{}'.format(os.path.join(basedir, 'data.sqlite'))
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
+app.config['MAIL_SERVER'] = 'smtp.googlemail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+app.config['NA_BLOG_ADMIN'] = os.environ.get('NA_BLOG_ADMIN')
+app.config['NA_BLOG_SUBJECT_PREFIX'] = '[NA_BLOG]'
+app.config['NA_BLOG_MAIL_SENDER'] = 'NA_BLOG Admin<from.na.blog@gmail.com>'
 
 bootstrap = Bootstrap(app)
 moment = Moment(app)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+mail = Mail(app)
 
 # consts
 
@@ -54,6 +63,8 @@ def index():
             db.session.add(user)
             db.session.commit()
             session['known'] = False
+            if app.config['NA_BLOG_ADMIN']:
+                send_mail(app.config['NA_BLOG_ADMIN'], 'New User', 'mail/new_user', user=user)
         else:
             session['known'] = True
         session['name'] = in_name
@@ -79,6 +90,16 @@ def internal_server_error(e):
 @app.shell_context_processor
 def make_shell_context():
     return dict(db=db, User=User, Role=Role)
+
+# send an email via Gmail SMTP server
+def send_mail(to, subject, template, **kwargs):
+    msg = Message('{}{}'.format(app.config['NA_BLOG_SUBJECT_PREFIX'], subject),
+                  sender=app.config['NA_BLOG_MAIL_SENDER'],
+                  recipients=[to])
+    msg.body = render_template('{}.txt'.format(template), **kwargs)
+    msg.html = render_template('{}.html'.format(template), **kwargs)
+    mail.send(msg)
+
 
 # classes
 class NameForm(FlaskForm):

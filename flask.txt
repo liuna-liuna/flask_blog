@@ -208,6 +208,10 @@
             app.config['SECRET_KEY'] is needed to protect against CrossSiteRequestForgery (CSRF) attack,
                 and Flask generates token for each form and stores into session.
 
+            配置 SECRET_KEY 可以用 app.config['SECRET_KEY']，最好是放在环境变量里。
+            # export SECRET_KEY=...
+            set SECRET_KEY=...
+
         WTForms 支持的HTML标准字段：
             BooleanField, HiddenField, PasswordField, DateField, DateTimeField,
             FileField, MutileFileField, DecimalField, IntegerField, FloatField,
@@ -364,6 +368,34 @@
         flask db upgrade
         flask db downgrade
         flask db stamp
+
+    F) Flask-Mail: Python有标准库smtplib可发送邮件，Flask-Mail 包装了 smtplib 能更好的与Flask集成。
+        Flask-Mail 连接到 Simple Mail TRanfer Protocol (SMTP)服务器，把邮件交给这个服务器发送。
+        Flask-Mail SMTP 服务器的配置和默认值：
+            MAIL_SERVER: localhost,
+            MAIL_PORT:   25,
+            MAIL_USE_TLS: False
+            MAIL_USE_SSL: False
+            MAIL_USERNAME: None
+            MAIL_PASSWORD: None
+        上述配置可以在code中设置： app.config[...]  = ... 。
+
+        MAIL_USERNAME, MAIL_PASSWORD 最好放在环境变量里。
+        NA_BLOG_ADMIN （email of amdin) 也放在环境变量里。
+        # export MAIL_USERNAME =...
+        set MAIL_USERNAME =...
+
+        pip install flask_mail
+
+        Usage Example:
+            # in flask shell:
+            from flask_mail import Message
+            from hello import mail
+            msg = Message('test email', sender='from_na_blog@gmail.com', recipients=['liuna_liuna@qq.com'])
+            msg.body = 'This is the plain text body.'
+            msg.html = 'This is the <b>HTML</b> body.'
+            with app.app_context():
+                mail.send(msg)
 
 
 
