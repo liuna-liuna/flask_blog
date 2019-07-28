@@ -150,6 +150,27 @@
 3.9) security
 
 3.10) test
+3.10.1) Example 1. use built-in unittest to do test.
+    A) code-snippet
+        import unittest
+        tests = unittest.TestLoader().discover('tests') # tests/ is the directory under which test_basics.py locates.
+        unittest.TextTestRunner(verbosity=2).run(tests)
+
+    B)
+    C) FAQ:
+        C.1) in sub-class of unittest.TestCase:
+            either remove __init__ or in exact __init__(self, *args, **kwargs) format, otherwise:
+              TypeError: __init__() takes 1 positional argument but 2 were given
+
+        class BasicsTestCase(unittest.TestCase):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                print('[TO BE REMOVED] in __init__ function in BasicsTestCase class.')
+
+    ref: https://stackoverflow.com/questions/47445137/unittest-selenium-init-takes-1-positional-argument-but-2-were-given
+    ref: https://stackoverflow.com/questions/42790980/python-unittest-throws-uncaught-typeerror-init-takes-1-positional-argumen/42791106
+
+
 3.11) distribution
 
 3.12) extension
@@ -398,11 +419,39 @@
                 mail.send(msg)
 
 
+3.13) Flask开发的大型应用的结构
+以一个blog system为例，
+    配置放在 config.py中；
+    程序入口在 <appname>.py 中如 nablog.py;
+    应用相关的放在 app/ 下: __init__.py, code， templates/, static/, email.py, models.py;
+                            code 在 main/ 下：main/__init__.py,
+                                              main/errors.py,
+                                              main/forms.py,
+                                              main/views.py,
+    路由提取到 blueprint 实现，在 main/__init__.py, main/errors.py, main/views.py里。
+    数据库迁移放在 migrations/ 下；
+    单元测试放在 tests/ 下；
+    依赖包放在 requirements.txt 中；
 
+    app 改为由工厂函数创建：
+        def create_app(config_name):
+            app = Flask(__name__)
+            app.config.from_object(config[config_name])
+            config[config_name].init_app(app)
 
+    Notes:
+    3.13.1) in sub-class of unittest.TestCase:
+            either remove __init__ or in exact __init__(self, *args, **kwargs) format.
 
+    3.13.2) 在 PyCharm 的 Terminal下运行的时候，
+            set FLASK_APP=nablog.py
+            set FLASK_CONFIG=testing
+            flask test
 
-
+            # or
+            set FLASK_APP=nablog.py
+            set FLASK_CONFIG=
+            flask run
 
 
 #
