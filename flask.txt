@@ -418,6 +418,65 @@
             with app.app_context():
                 mail.send(msg)
 
+    G) Flask-Login：管理已登陆用户的session
+
+            pip install flask_login
+
+
+
+    F) Werkzeug：计算密码的散列值并进行核对
+            存储在数据库中的用户密码不能是用户的原始密码，而是hash of password。
+                original password + salt -> through multiple uni-directional password convertion -> hash of the password.
+
+            可以用 werkzeug.security generate_password_hash 来生成密码散列，用 check_password_hash 来核对。
+                也可以用 bcrypt 和 Passlib 计算密码的散列值。
+
+            Usage Example:
+                # in models.py:
+                    from werkzeug import generate_password_hash, check_password_hash
+
+                    Class User(db.Model):
+                        ...
+                        password_hash = db.Column(db.String(128))
+
+                        @property
+                        def password(self):
+                            raise AttributeError('Password is not a readable attribute')
+
+                        @password.setter
+                        def password(self, password):
+                            self.password_hash = generate_password_hash(password)
+
+                        def verify_password(self, password):
+                            return check_password_hash(self.password_hash, password)
+
+                # check in flask shell:
+                    >>> u = User()
+                    >>> u.password = 'cat'
+                    >>> u.password
+                    Traceback (most recent call last):
+                      File "<console>", line 1, in <module>
+                      File "D:\workspace\pweb\app\models.py", line 47, in password
+                        raise AttributeError('Password is not a readable attribute')
+                    AttributeError: Password is not a readable attribute
+                    >>> u.password_hash
+                    'pbkdf2:sha256:150000$ju9iskX6$c693dd143510740e6bb7fcda074f41bb98cb17437608d8177646716304af0c32'
+                    >>> u.verify_password('cat')
+                    True
+                    >>> u.verify_password('dog')
+                    False
+                    >>> u2 = User()
+                    >>> u2.password = 'cat'
+                    >>> u2.password_hash
+                    'pbkdf2:sha256:150000$Ft6latWs$867a26e074f5e65088d57a32e07990191eac4405586c4e699a2d81e6a7188691'
+                    >>> u.password_hash == u2.password_hash
+                    False
+
+
+
+    H) itsdangerous：生成并核对 加密安全令牌
+
+
 
 3.13) Flask开发的大型应用的结构
 以一个blog system为例，
@@ -452,6 +511,9 @@
             set FLASK_APP=nablog.py
             set FLASK_CONFIG=
             flask run
+
+
+
 
 
 #
