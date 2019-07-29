@@ -419,8 +419,50 @@
                 mail.send(msg)
 
     G) Flask-Login：管理已登陆用户的session
+            Flask-Login 是一个非常有用的小型扩展，专门用于管理用户身份验证系统中的验证状态，且不依赖于特定的身份验证机制。
+            Flask-Login 运转需要应用中有 User 对象，且User模型必须实现以下属性和方法：
+                is_authenticated, is_active, is_anonymous, get_id()
+            使用 Flask-Login 两种方法：1. 在User模型中实现以上属性和方法；
+                                      2. 用Flask-Login 提供的UserMixin类。UserMixin 包含默认实现，能满足多数需求。
+            Flask-Login 中定义了 current_user，在 view functions and templates 中自动可用。
+                          可以用 current_user.is_authenticated 判断当前用户是否登录。
+
+            Flask-Login 中用户登录过程：
+            （1）用户点击 Log In 链接，访问 http://localhost:5000/auth/login， 处理这个URL的函数返回登录表单模板；
+
+            （2）用户输入用户名和密码，点击提交按钮。再次调用同一处理函数，不过这一次处理的是POST请求，不是GET请求。
+                a.处理函数验证通过表单提交的凭据，然后调用Flask-Login的 login_user() 函数，登入用户；
+                b.login_user() 函数把用户的ID以字符串的形式写入用户会话；
+                c.处理数重定向到首页；
+
+            （3）浏览器收到重定向响应，请求首页。
+                a.调用首页的视图函数，渲染主页的 Jinja2 模板；
+                b.在渲染这个Jinja2 模板的过程中，首次引用Flask-Login的 current_user；
+                c.该请求还没有给上下文变量 current_user 赋值，因此调用Flask-Login内部的_get_user()函数，找出用户是谁；
+                d._get_user()函数检查用户会话中有没有用户ID，如果没有，返回一个Flask-Login的 AnonymousUser 实例，
+                    如果有ID，调用应用中使用 user_loader 装饰器注册的函数，传入用户ID；
+                e.应用中的 user_loader 处理函数从数据库中读取用户，将其返回。
+                    Flask-Login 把返回到用户对象赋值给当前请求的 current_user 上下文变量。
+                f.模板收到新赋值的 current_user。
 
             pip install flask_login
+
+            Usage Example:
+                define class LoginForm in auth/forms.py;
+                define login template in templates/auth/login.html;
+                update User model in models.py to add email column;
+                change index() in auth/views.py, add login(), logout();
+                add login_manager in app/__init__.py;
+                update template/base.html add Log In/Log Out navigation button;
+                update template/index.html to use current_user.is_authenticated;
+                migrate db via
+                    flask db migrate
+                    flask db upgrade
+                test in flask shell:
+                    u = User(email='john@example.com', username='john', password='cat')
+                    db.session.add(u)
+                    db.session.commit()
+                    # then try http://127.0.0.1:5000/auth/login in browser.
 
 
 

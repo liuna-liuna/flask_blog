@@ -4,8 +4,8 @@
 {% block page_content %}
 <div class="page-header">
     <h1>Hello
-        {% if name %}
-            {{ name|title }}
+        {% if current_user.is_authenticated %}
+            {{ current_user.username|title }}
         {% else %}
             Stranger
         {% endif %}
