@@ -497,6 +497,7 @@
             app = Flask(__name__)
             app.config.from_object(config[config_name])
             config[config_name].init_app(app)
+    app 改为由工厂函数创建以后，可以用蓝图在全局作用域中定义路由。
 
     Notes:
     3.13.1) in sub-class of unittest.TestCase:
