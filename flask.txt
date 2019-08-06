@@ -555,6 +555,10 @@
             set FLASK_CONFIG=
             flask run
 
+            # or
+            set FLASK_APP=nablog.py
+            flask shell
+
 
 
 
