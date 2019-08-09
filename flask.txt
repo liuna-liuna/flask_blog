@@ -181,7 +181,7 @@
         pip install flask-bootstrap
         其 boostrap/base.html中，定义了如下block：
             doc, html, html_attribs, head, title, metas（一组meta标签）,
-            styles（CSS声明）, body, body_attribs, body, navbar, content, scripts（文档底部的JavaScript声明）.
+            styles（CSS声明）, body, body_attribs, navbar, content, scripts（文档底部的JavaScript声明）.
 
          Usage example:
             # in hello.py
@@ -190,6 +190,15 @@
 
             # in templates/base.html
             {% extends bootstrap/base.html %}
+
+        Bootstrap 中 data-toggle 和 data-target 的作用：
+            定义 data-target 指定的元素以 data-toggle 指定的形式显示。
+            HTML5 运行用户自定义标签，自定义标签大多以 data- 开头。
+                Bootstrap 中，data-toggle指事件以什么触发，如 modal, toggle, dropdown, popover, tooltip etc.
+                              data-target指事件的目标，如 id属性或者 class属性。
+
+        # ref: data-toggle与data-target是什么作用 https://blog.csdn.net/d295968572/article/details/56667863
+        # ref: 关于bootstrap的data-toggle和data-target https://blog.csdn.net/weixin_37986839/article/details/76593332
 
     B) Flask-Moment：Moment.js 是一个优秀的 JavaScript 开发的在客户端浏览器中渲染日期和时间的开源库，
                      Flask-Moment 是一个Flask扩展，能简化把 Moment.js 集成到 Jinja2模板中的过程。
