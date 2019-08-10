@@ -2,6 +2,58 @@
 # Flask 知识点
 #
 1. coding
+1.0) usage of decorator
+    无参装饰器：两层函数
+    带参装饰器：三层函数
+
+    Example of Usage
+        # 带参装饰器 in decorators.py
+        from functools import wraps
+        from flask import abort
+        from flask_login import current_user
+        from .models import Permission
+
+        def permission_required(perm):
+            def decorator(f):
+                @wraps(f)
+                def decorated_func(*args, **kwargs):
+                    if not current_user.can(perm):
+                        return abort(403)
+                    return f(*args, **kwargs)
+                return decorated_func
+            return decorator
+
+        def admin_required(f):
+            return permission_required(Permission.ADMIN)(f)
+
+        # in other .py files
+        from flask_login import login_required
+        from ..decorators import permission_required, admin_required
+        from ..models import Permission
+
+        @main.route('/admin')
+        @login_required
+        @admin_required
+        def for_adminis_only():
+            return "For administrators!"
+
+        @main.route('/moderate')
+        @login_required
+        @permission_required(Permission.MODERATE)
+        def for_moderators_only():
+            return "For comment moderators!"
+
+1.1) usage of context
+    # in test_user_model.py
+    import unittest
+    from app.models import User
+
+    class UserModelTestCase(unittest.UnitTest):
+        def test_user_password_getter(self):
+            u = User(password = 'cat')
+            with self.assertRaises(AttributeError):
+                u.password
+
 
 2. how to run
     # on Windows, use export for Linux
@@ -89,7 +141,7 @@
             response.set_cookie('answer', '42')
             return response
 
-    response的快捷方式：redirct(...), abort(...); abort不会把控制权交还给调用它的函数，而是抛出异常。
+    response的快捷方式：redirect(...), abort(...); abort不会把控制权交还给调用它的函数，而是抛出异常。
     Example：
         from flask import redirect
 
@@ -523,6 +575,18 @@
                     >>> u.password_hash == u2.password_hash
                     False
 
+                set FLASK_APP = nablog.py
+                flask shell
+                >>> from app.models import Permission
+                >>> r = Role(name='User')
+                >>> r.add_permission(Permission.FOLLOW)
+                >>> r.add_permission(Permission.WRITE)
+                >>> r.has_permission(Permission.FOLLOW)
+                True
+                >>> r.reset_permissions()
+                >>> r.has_permission(Permission.FOLLOW)
+                False
+
 
 
     H) itsdangerous：生成并核对 加密安全令牌
@@ -568,8 +632,12 @@
             set FLASK_APP=nablog.py
             flask shell
 
+    3.13.3) update requirements.txt:
+        # to install pip if pip is missing or errors out
+        easy_install pip
 
-
+        pip list
+        pip freeze > requirements.txt
 
 
 #
