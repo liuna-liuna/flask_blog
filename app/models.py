@@ -20,7 +20,7 @@ from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask_login import UserMixin, AnonymousUserMixin
 from flask import current_app
 from . import db, login_manager
-
+from datetime import datetime
 
 # configuration
 
@@ -66,7 +66,9 @@ class Role(db.Model):
         return self.permissions & perm == perm
 
     def __repr__(self):
-        return '<Role {}>'.format(self.name)
+        return '<Role {}>: {}, {}, {}, {}, {}'.format(
+            self.name, self.id, self.name, self.permissions, self.users, self.default)
+        # return '<Role {}>'.format(self.name)
 
     @staticmethod
     def insert_roles():
@@ -97,6 +99,11 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128))
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
     confirmed = db.Column(db.Boolean, default=False)
+    name = db.Column(db.String(64))     # real neame
+    location = db.Column(db.String(64))
+    about_me = db.Column(db.Text())
+    member_since = db.Column(db.DateTime(), default=datetime.utcnow)
+    last_seen = db.Column(db.DateTime(), default=datetime.utcnow)
 
     def __init__(self, **kwargs):
         super(User, self).__init__(**kwargs)
@@ -176,8 +183,16 @@ class User(UserMixin, db.Model):
     def is_administrator(self):
         return self.can(Permission.ADMIN)
 
+    def ping(self):
+        self.last_seen = datetime.utcnow()
+        db.session.add(self)
+        db.session.commit()
+
     def __repr__(self):
-        return '<User {}>'.format(self.username)
+        return '<User {}>: {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}'.format(
+            self.username, self.id, self.username, self.name, self.email, self.role_id, self.role,
+            self.password_hash, self.confirmed, self.location, self.about_me, self.member_since, self.last_seen)
+        # return '<User {}>'.format(self.username)
 
 class AnonymousUser(AnonymousUserMixin):
     def can(self, perm):

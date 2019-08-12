@@ -351,7 +351,7 @@
 
         常用的SQLAlchemy列类型：
             Integer, SmallInteger, BigInteger, Float, Numeric,
-            String, Text, Unicode, UnicodeText,
+            String, Text, Unicode, UnicodeText, (db.String 需要指定长度，db.Text是变长字段，不需要指定最大长度），
             Boolean, Date, Time, DateTime, Interval （对应Python中的datetime.timedelta），
             Enum （对应Python中的str，一组字符串）,
             PickleType （对应Python中的任何Python对象，自动使用Pickle序列化）,
