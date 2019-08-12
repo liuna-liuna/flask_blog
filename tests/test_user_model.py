@@ -16,6 +16,7 @@ __VERSION__ = "1.0.0.07292019"
 
 # imports
 import unittest, time
+from datetime import datetime
 from app import create_app, db
 from app.models import User, AnonymousUser, Role, Permission
 
@@ -135,12 +136,43 @@ class UserModelTestCase(unittest.TestCase):
         self.assertFalse(role.has_permission(Permission.ADMIN))
 
     def test_moderator_role(self):
-        pass
+        role = Role.query.filter_by(name='Moderator').first()
+        self.assertTrue(role.has_permission(Permission.FOLLOW))
+        self.assertTrue(role.has_permission(Permission.WRITE))
+        self.assertTrue(role.has_permission(Permission.COMMENT))
+        self.assertTrue(role.has_permission(Permission.MODERATE))
+        self.assertFalse(role.has_permission(Permission.ADMIN))
 
     def test_administrator_role(self):
-        pass
+        role = Role.query.filter_by(name='Administrator').first()
+        self.assertTrue(role.has_permission(Permission.FOLLOW))
+        self.assertTrue(role.has_permission(Permission.WRITE))
+        self.assertTrue(role.has_permission(Permission.COMMENT))
+        self.assertTrue(role.has_permission(Permission.MODERATE))
+        self.assertTrue(role.has_permission(Permission.ADMIN))
 
     def test_anonymous_role(self):
-        pass
+        user = AnonymousUser()
+        self.assertFalse(user.can(Permission.FOLLOW))
+        self.assertFalse(user.can(Permission.WRITE))
+        self.assertFalse(user.can(Permission.COMMENT))
+        self.assertFalse(user.can(Permission.MODERATE))
+        self.assertFalse(user.can(Permission.ADMIN))
+
+    def test_timestamps(self):
+        user = User(password='cat')
+        db.session.add(user)
+        db.session.commit()
+        self.assertTrue((datetime.utcnow() - user.member_since).total_seconds() < 3)
+        self.assertTrue((datetime.utcnow() - user.last_seen).total_seconds() < 3)
+
+    def test_ping(self):
+        user = User(password='cat')
+        db.session.add(user)
+        db.session.commit()
+        last_seen_before = user.last_seen
+        time.sleep(2)
+        user.ping()
+        self.assertTrue(user.last_seen > last_seen_before)
 
 # main entry

@@ -224,6 +224,12 @@
 
 
 3.11) distribution
+    A) archive code into git repository
+        git add ...
+        git commit -m '...'
+        git tag -a 10a cf73927 -m '...'
+        git push --follow-tags
+
 
 3.12) extension
     A) Flask-Bootstrap: Bootstrap是twitter开源的一个用于开发web的客户端框架，提供用户界面组件，兼容桌面和移动浏览器。
@@ -525,6 +531,18 @@
                     db.session.commit()
                     # then try http://127.0.0.1:5000/auth/login in browser.
 
+            # 在用户详情页面显示地点：
+            # in app/templates/user.html
+                {% if user.name or user.location %}
+                <p>
+                    {% if user.name %}{{ user.name }}{% endif %}
+                    {% if user.location %}
+                        From <a href="http://maps.google.com/?q={{ user.location }}">{{ user.location }}</a>
+                    {% endif %}
+                </p>
+                {% endif %}
+
+                # could change to https://map.baidu.com/?q={{ user.location }} if couldn't open google maps.
 
 
     F) Werkzeug：计算密码的散列值并进行核对
