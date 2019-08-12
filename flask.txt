@@ -648,6 +648,27 @@
                     ...
                 ...
 
+    K) faker: 生成虚拟数据, fakers 中用 Faker 类生成虚拟数据。
+              字段包括： email(), user_name(), name(), city(), text(), past_date(), etc.
+        Example:
+            pip install faker
+
+            from faker import Faker
+            def users(count=N):
+                fake = Faker()
+                i = 0
+                while i<count:
+                    u = User(email=fake.email(),
+                             username=fake.user_name(),
+                             ...)
+                    db.session.add(u)
+                    try:
+                        db.session.commit()
+                        i += 1
+                    except IdentityError:
+                        db.session.rollback()
+
+
 
 3.13) Flask开发的大型应用的结构
 以一个blog system为例，
