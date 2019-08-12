@@ -403,6 +403,9 @@
 
                 user_role = Role.query.filter_by(name='User').first()
                 User.query.filter_by(role=user_role).all()
+                User.query.get_or_404(id)
+                user = User.query.filter_by(username=username).first_or_404()
+
 
                 # str(...) 返回SQLAlchemy为查询生成的SQL查询语句。
                 print(str(User.query.filter_by(role=user_role))
@@ -544,6 +547,20 @@
 
                 # could change to https://map.baidu.com/?q={{ user.location }} if couldn't open google maps.
 
+            # 设置用户头像
+            (1) 用 gravatar 网站生成头像：
+                https://secure.gravatar.com/avatar/<md5hash_of_email>?s=size&d=default&r=rating
+                or https://www.gravatar.com/avatar/<md...
+                    如 https://secure.gravatar.com/avatar/d4c74594d841139328695756648b6bd6?d=identicon&r=g&s=100 。
+            (2) 用 bootstrap 的CSS样式 profile-thumbnail, profile-header 显示：
+                in app/templates/users.html,
+                   app/templates/index.html,
+                   app/templates/_posts.html:
+                    <img class="img-rounded profile-thumbnail" src="{{ user.gravatar(size=256) }}">
+                    <div class="profile-header">
+                        ...
+                    </div>
+
 
     F) Werkzeug：计算密码的散列值并进行核对
             存储在数据库中的用户密码不能是用户的原始密码，而是hash of password。
@@ -609,6 +626,27 @@
 
     H) itsdangerous：生成并核对 加密安全令牌
 
+    I) shell： Flask提供了shell功能：
+        Example:
+            # to integrate Python shell
+            @app.shell_context_processor
+            def make_shell_context():
+                return dict{Role=Role, User=User, db=db}
+
+    J) click：简单易用的命令行解析工具
+        Click is a simple Python module inspired by the stdlib optparse to make writing command line scripts fun.
+        Unlike other modules, it's based around a simple API that does not come with too much magic
+            and is composable.
+
+        Example:
+        @app.cli.command
+        @click.argument('test_names', nargs=-1)
+        def test(test_names):
+            ""Run the unit tests."""
+                import unittest
+                if test_names:
+                    ...
+                ...
 
 
 3.13) Flask开发的大型应用的结构
