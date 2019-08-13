@@ -33,7 +33,6 @@ class Permission:
     WRITE = 4
     MODERATE = 8
     ADMIN = 16
-    WRITE_ARTICLES = 32
 
 # functions
 @login_manager.user_loader
