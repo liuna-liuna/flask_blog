@@ -400,16 +400,18 @@
 
                 query 执行方法：
                     all(), first(), first_or_404(), get(), get_or_404(), count(), paginate()
-                    paginate() 方法返回一個 Pagination類對象。
-                        Pagination類的屬性：
-                            items, query, page,
-                            pages, total, per_page,
+                    paginate() 方法返回一个 Pagination类对象。
+                        Pagination类的属性：
+                            items（当前页上的记录）, query（查找的源查询）, page（当前页数）,
+                            pages（查询返回的总页数）, total（查询返回的总记录数量）, per_page,
                             has_prev, has_next, prev_num, next_num.
 
                         Pagination類的方法：
                             iter_pages(left_edge=2, left_current=2, right_current=5, right_edge=2),
-                            prev(),
-                            next().
+                                        返回一个迭代器，在分页导航中显示的页数列表；
+                            prev()上一页的分页对象；
+                            next()下一页的分页对象。
+
                         Usage Example:
                             in  main/views.py:
                                 page = request.args.get('page', 1, type=int)
@@ -433,6 +435,7 @@
                                 <div class="pagination">
                                     {{ macros.pagination_widget(pagination, '.user', username=user.username) }}
                                 </div>
+
 
                 user_role = Role.query.filter_by(name='User').first()
                 User.query.filter_by(role=user_role).all()
@@ -701,7 +704,18 @@
                     except IdentityError:
                         db.session.rollback()
 
+    L) Flask-PageDown：用 Flask 包装的 PageDown，把 PageDown 集成到Flask WTF 表单中。
+       PageDown:       使用 JavaScript 实现的客户端 MarkDown 到 HTML 转换程序。
+       MarkDown：      使用 Python 实现的服务器端 MarkDown 到 HTML 的转换程序。
+       Bleach：        使用 Python 实现的 HTML 清理程序。
 
+        pip install flask_pagedown markdown bleach
+
+
+
+    M)
+
+    N)
 
 3.13) Flask开发的大型应用的结构
 以一个blog system为例，

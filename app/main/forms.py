@@ -16,6 +16,7 @@ __VERSION__ = "1.0.0.07282019"
 
 # imports
 from flask_wtf import FlaskForm
+from flask_pagedown.fields import PageDownField
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField, SelectField
 from wtforms.validators import DataRequired, Length, Email, Regexp, ValidationError
 from ..models import Role, User
@@ -64,7 +65,7 @@ class EditProfileAdminForm(FlaskForm):
             raise ValidationError('Username already in use.')
 
 class PostForm(FlaskForm):
-    body = TextAreaField("What's in your mind to express?", validators=[DataRequired()])
+    body = PageDownField("What's in your mind to express?", validators=[DataRequired()])
     submit = SubmitField('Submit')
 
 # main entry
