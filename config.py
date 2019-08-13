@@ -36,6 +36,7 @@ class Config(object):
     NA_BLOG_SUBJECT_PREFIX = '[NA_BLOG]'
     NA_BLOG_MAIL_SENDER = 'NA_BLOG Admin<from.na.blog@gmail.com>'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    NA_BLOG_POSTS_PER_PAGE = os.environ.get('NA_BLOG_POSTS_PER_PAGE') or 20
 
     @staticmethod
     def init_app(app):

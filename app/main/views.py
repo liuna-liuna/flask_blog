@@ -15,9 +15,8 @@ __VERSION__ = "1.0.0.07282019"
 
 
 # imports
-from flask import render_template, redirect, url_for, session, current_app, flash
+from flask import render_template, redirect, url_for, current_app, flash, request
 from flask_login import current_user, login_required
-from datetime import datetime
 from .forms import NameForm, EditProfileForm, EditProfileAdminForm, PostForm
 from . import main
 from .. import db
@@ -38,14 +37,21 @@ def index():
         db.session.add(user)
         db.session.commit()
         return redirect(url_for('.index'))
-    posts = Post.query.order_by(Post.timestamp.desc()).all()
-    return render_template('index.html', form=form, posts=posts)
+    # pagination
+    page = request.args.get('page', 1, type=int)
+    pagination = Post.query.order_by(Post.timestamp.desc()).paginate(
+        page, per_page=current_app.config['NA_BLOG_POSTS_PER_PAGE'], error_out=False)
+    posts = pagination.items
+    return render_template('index.html', form=form, posts=posts, pagination=pagination)
 
 @main.route('/user/<username>')
 def user(username):
     user = User.query.filter_by(username=username).first_or_404()
-    posts = user.posts.order_by(Post.timestamp.desc()).all()
-    return render_template('user.html', user=user, posts=posts)
+    page = request.args.get('page', 1, type=int)
+    pagination = user.posts.order_by(Post.timestamp.desc()).paginate(
+        page, per_page=current_app.config['NA_BLOG_POSTS_PER_PAGE'], error_out=False)
+    posts = pagination.items
+    return render_template('user.html', user=user, posts=posts, pagination=pagination)
 
 @main.route('/edit-profile', methods=['GET', 'POST'])
 @login_required
