@@ -44,6 +44,7 @@
             return "For comment moderators!"
 
 1.1) usage of context
+    see also 3.10.1)B)
     # in test_user_model.py
     import unittest
     from app.models import User
@@ -208,7 +209,32 @@
         tests = unittest.TestLoader().discover('tests') # tests/ is the directory under which test_basics.py locates.
         unittest.TextTestRunner(verbosity=2).run(tests)
 
-    B)
+    B) use with app.test_request_context() to activate a temporary request context激活一个临时的请求上下文
+
+            def test_gravatar(self):
+                user = User(email='john@example.com', password='cat')
+                # with is to fix RuntimeError: Working outside of request context.
+                #   gravatar(...) needs an active HTTP request: it calls request.....
+                with self.app.test_request_context('/'):
+                    gravatar = user.gravatar()
+                    gravatar_256 = user.gravatar(size=256)
+                    gravatar_pg = user.gravatar(rating='pg')
+                    gravatar_retro = user.gravatar(default='retro')
+                self.assertTrue('https://secure.gravatar.com/avatar/d4c74594d841139328695756648b6bd6' in gravatar \
+                                or 'https://www.gravatar.com/avatar/d4c74594d841139328695756648b6bd6' in gravatar)
+                self.assertTrue('s=256' in gravatar_256)
+                self.assertTrue('r=pg' in gravatar_pg)
+                self.assertTrue('d=retro' in gravatar_retro)
+
+        def test_user_password_getter(self):
+            u = User(password = 'cat')
+            with self.assertRaises(AttributeError):
+                u.password
+
+
+        # ref: http://docs.jinkan.org/docs/flask/testing.html
+        # ref: https://stackoverflow.com/questions/45821222/fire-multiple-requests-in-a-flask-test-request-context
+
     C) FAQ:
         C.1) in sub-class of unittest.TestCase:
             either remove __init__ or in exact __init__(self, *args, **kwargs) format, otherwise:

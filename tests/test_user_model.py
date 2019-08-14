@@ -18,7 +18,7 @@ __VERSION__ = "1.0.0.07292019"
 import unittest, time
 from datetime import datetime
 from app import create_app, db
-from app.models import User, AnonymousUser, Role, Permission
+from app.models import User, AnonymousUser, Role, Permission, Follow
 
 # configuration
 
@@ -174,5 +174,61 @@ class UserModelTestCase(unittest.TestCase):
         time.sleep(2)
         user.ping()
         self.assertTrue(user.last_seen > last_seen_before)
+
+    def test_gravatar(self):
+        user = User(email='john@example.com', password='cat')
+        # with is to fix RuntimeError: Working outside of request context.
+        #   gravatar(...) needs an active HTTP request: it calls request.....
+        with self.app.test_request_context('/'):
+            gravatar = user.gravatar()
+            gravatar_256 = user.gravatar(size=256)
+            gravatar_pg = user.gravatar(rating='pg')
+            gravatar_retro = user.gravatar(default='retro')
+        self.assertTrue('https://secure.gravatar.com/avatar/d4c74594d841139328695756648b6bd6' in gravatar \
+                        or 'https://www.gravatar.com/avatar/d4c74594d841139328695756648b6bd6' in gravatar)
+        self.assertTrue('s=256' in gravatar_256)
+        self.assertTrue('r=pg' in gravatar_pg)
+        self.assertTrue('d=retro' in gravatar_retro)
+
+    # .count()-1 -2 is to minus follow self
+    def test_follows(self):
+        user1 = User(email='john@example.com', password='cat')
+        user2 = User(email='susan@example.com', password='dog')
+        db.session.add(user1)
+        db.session.add(user2)
+        db.session.commit()
+        self.assertFalse(user1.is_following(user2))
+        self.assertFalse(user2.is_following(user1))
+        timestamp_before = datetime.utcnow()
+        user1.follow(user2)
+        db.session.add(user1)
+        db.session.commit()
+        self.assertTrue(user1.is_following(user2))
+        self.assertTrue(user2.is_followed_by(user1))
+        self.assertFalse(user2.is_following(user1))
+        self.assertFalse(user1.is_followed_by(user2))
+        f1 = user1.followed.all()[-1]
+        self.assertTrue(f1.followed == user2)
+        f2 = user2.followers.all()[-1]
+        self.assertTrue(f2.follower == user1)
+        self.assertTrue(user1.followed.count()-1 == 1)
+        self.assertTrue(user2.followers.count()-1 == 1)
+        timestamp_after = datetime.utcnow()
+        self.assertTrue(timestamp_before < f1.timestamp < timestamp_after)
+        user1.unfollow(user2)
+        db.session.add(user1)
+        db.session.commit()
+        self.assertTrue(user1.followed.count()-1 == 0)
+        self.assertTrue(user2.followers.count()-1 == 0)
+        self.assertTrue(Follow.query.count()-2 == 0)
+        user2.follow(user1)
+        db.session.add(user2)
+        db.session.add(user1)
+        db.session.commit()
+        db.session.delete(user2)
+        db.session.commit()
+        self.assertTrue(Follow.query.count()-1 == 0)
+
+
 
 # main entry
