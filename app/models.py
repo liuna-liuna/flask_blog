@@ -264,6 +264,10 @@ class User(UserMixin, db.Model):
                 db.session.add(user)
                 db.session.commit()
 
+    @property
+    def followed_posts(self):
+        return Post.query.join(Follow, Follow.followed_id == Post.author_id).filter_by(Follow.follower_id == self.id)
+
     def __repr__(self):
         return '<User {}>: {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}'.format(
             self.username, self.id, self.username, self.name, self.email, self.role_id, self.role,

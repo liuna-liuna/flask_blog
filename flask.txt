@@ -396,6 +396,13 @@
             primary_key, unique, index, nullable, default.
         常用的SQLAlchemy关系选项，用在函数 db.relationship(...) 中：
             backref, primaryjoin, lazy, uselist（一对一时可设为False）, order_by, secondary, secondaryjoin.
+            backref: 默认是 select(关系两端任何一方首次访问的时候按需加载),
+                            joined（加载记录，但使用联结，一次加载所有的记录），
+                            immediate（源对象加载后就加载），
+                            subquery（立即加载，但使用子查询），
+                            noload（永不加载），
+                            dynamic（不加载记录，但提供加载记录的查询）。
+
 
     D.3) Flask-SQLAlchemy 中数据库的关系如何定义
         一对一：在一的一方用 db.relationship(..., uselist=False...)设置，
