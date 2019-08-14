@@ -440,10 +440,24 @@
                         class Follow(db.Model):
                             __tablename__ = 'follows'
                             follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
-                            followee_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+                            followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
                             timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-
+                    关注、被关注关系的设计：
+                    # from user perspective:
+                    #   follow(...), following other users,
+                    #               (from other users' perspective) followed relationship
+                    #                                                with Follow.follower_id/follower;
+                    #   is_followed_by(...), being followed by other users,
+                    #               (from other users' perspective) followers relationship
+                    #                                                with Follow.followed_id/followed.
+                    #
+                    # in User.follow(self, user) method:
+                        # parameter to Follow(...) is defined in User via db.relationship(...backref=...)
+                    # in User.is_following(self, user) method:
+                       # parameter to filter_by(...) is defined in Follow(...),
+                       #                                           followed, followers are both Follow instances.
+                       #
 
     D.4) Flask-SQLAlchemy 增删改查
         Usage Example 1. 增删改查

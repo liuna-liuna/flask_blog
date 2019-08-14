@@ -97,7 +97,7 @@ class Role(db.Model):
 class Follow(db.Model):
     __tablename__ = 'follows'
     follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
-    followee_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
 class User(UserMixin, db.Model):
@@ -115,14 +115,20 @@ class User(UserMixin, db.Model):
     last_seen = db.Column(db.DateTime(), default=datetime.utcnow)
     avatar_hash = db.Column(db.String(32))
     posts = db.relationship('Post', backref='author', lazy='dynamic')
-    followees = db.relationship('Follow',
+    # from user perspective:
+    #   follow(...), following other users,
+    #               (from other users' perspective) followed relationship with Follow.follower_id/follower;
+    #   is_followed_by(...), being followed by other users,
+    #               (from other users' perspective) followers relationship with Follow.followed_id/followed.
+    #
+    followed = db.relationship('Follow',
                                foreign_keys=[Follow.follower_id],
                                backref=db.backref('follower', lazy='joined'),
                                lazy='dynamic',
                                cascade='all, delete-orphan')
     followers = db.relationship('Follow',
-                               foreign_keys=[Follow.followee_id],
-                               backref=db.backref('followee', lazy='joined'),
+                               foreign_keys=[Follow.followed_id],
+                               backref=db.backref('followed', lazy='joined'),
                                lazy='dynamic',
                                cascade='all, delete-orphan')
 
@@ -228,19 +234,19 @@ class User(UserMixin, db.Model):
     # parameter to Follow(...) is defined in User via db.relationship(...backref=...)
     def follow(self, user):
         if not self.is_following(user):
-            f = Follow(followee=user)
-            self.followees.append(f)
+            f = Follow(followed=user)
+            self.followed.append(f)
 
     def unfollow(self, user):
-        f = self.followees.filter_by(followee_id=user.id).first()
+        f = self.followed.filter_by(followed_id=user.id).first()
         if f:
-            self.followees.remove(f)
+            self.followed.remove(f)
 
-    # parameter to filter_by(...) is defined in Follow(...), followees, followers are both Follow instances.
+    # parameter to filter_by(...) is defined in Follow(...), followed, followers are both Follow instances.
     def is_following(self, user):
         if user.id is None:
             return False
-        return self.followees.filter_by(followee_id=user.id).first() is not None
+        return self.followed.filter_by(followed_id=user.id).first() is not None
 
     def is_followed_by(self, user):
         if user.id is None:
