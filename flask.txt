@@ -602,11 +602,33 @@
             under D:\workspace\pweb\:
                 alembic -c D:\workspace\pweb\migrations\alembic.ini heads
                 alembic -c D:\workspace\pweb\migrations\alembic.ini merge heads
+                alembic -c migrations\alembic.ini history
 
                 # 生成从上次 flask db upgrade 后新的修改的 migrate script，  如 6e19a4658170_.py
                 alembic -c migrations\alembic.ini revisions
                 # similar to
                 flask db migrate
+
+            could add 1 unit test case to check if multiple heads in db via Alembic:
+                from alembic.config import Config
+                from alembic.script import ScriptDirectory
+
+                def test_only_single_head_revision_in_migrations():
+                    config = Config()
+                    config.set_main_option("script_location", "nablog:migrations")
+                    script = ScriptDirectory.from_config(config)
+
+                    # This will raise if there are multiple heads
+                    script.get_current_head()
+
+                    # to check current heads
+                    # print('current head in db via Alembic: {}'.format(script.get_current_head()))
+
+
+
+            # ref: https://stackoverflow.com/questions/28392347/failed-no-config-file-alembic-ini-found
+            # ref: https://stackoverflow.com/questions/22342643/alembic-revision-multiple-heads-due-branching-error
+            # ref: https://blog.jerrycodes.com/multiple-heads-in-alembic-migrations/
 
         flask-migrate FAQ:
         (1) Scenario: rename columns in table Follow, run flask db migrate, flask db upgrade.
