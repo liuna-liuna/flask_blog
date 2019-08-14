@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% import "_macros.html" as macros %}
+
+{% block title %}NaBlog - {{ title }} {{ user.username }} {% endblock %}
+{% block page_content %}
+<div class="page-header">
+    <h1>{{ title }} {{ user.username }}</h1>
+</div>
+<table class="table table-hover followers">
+    <thead><tr><th>User</th><th>Since</th></tr></thead>
+    {% for f in follows %}
+    <tr>
+        <td>
+            <a href="{{ url_for('.user', username=f.user.username) }}">
+                <img class="img-rounded" src="{{ f.user.gravatar(size=32) }}">
+                {{ f.user.username }}
+            </a>
+        </td>
+        <td>{{ moment(f.timestamp).format('L') }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}
+
+<div class="pagination">
+    {{ macros.pagination_widget(pagination, endpoint, username=user.username) }}
+</div>

@@ -576,7 +576,7 @@
         用 Flask-Migrate 管理数据库模型变化的步骤如下：
         （1）对模型做必要的修改；
         （2）执行 flask db migrate 命令，自动创建一个迁移脚本；
-        （3）检查自动生成的脚本，根据对模型的实际改动进行调整；
+        （3）检查自动生成的脚本，根据对模型的实际改动进行调整；!! 重命名列的时候调整为drop_table(...) 然后 create_table(...) !!
         （4）把迁移脚本纳入版本控制；
         （5）执行 flask db upgrade 命令，把迁移应用到数据库中。
         如果前一个迁移还没提交，运行 flask db downgrade， 再重复上述步骤。
@@ -586,8 +586,155 @@
         flask db init
         flask db migrate
         flask db upgrade
+        flask db upgrade 15fe2ea317a5 # 15fe2ea317a5 is the head name
+
         flask db downgrade
         flask db stamp
+
+        flask-migrate 安装在 venv pweb 中以后，
+            D:\workspace\pweb\Scripts\alembic.exe
+            D:\workspace\pweb\migrations\alembic.ini
+                # alembic.ini make sure [alembic] section existing and script_location is set,
+                    [alembic]
+                    script_location = migrations
+
+            alembic 命令：
+            under D:\workspace\pweb\:
+                alembic -c D:\workspace\pweb\migrations\alembic.ini heads
+                alembic -c D:\workspace\pweb\migrations\alembic.ini merge heads
+
+                # 生成从上次 flask db upgrade 后新的修改的 migrate script，  如 6e19a4658170_.py
+                alembic -c migrations\alembic.ini revisions
+                # similar to
+                flask db migrate
+
+        flask-migrate FAQ:
+        (1) Scenario: rename columns in table Follow, run flask db migrate, flask db upgrade.
+            flask db upgrade errors out:
+                (pweb) D:\workspace\pweb>flask db upgrade
+                INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+                INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+                INFO  [alembic.runtime.migration] Running upgrade 8aee64a56377 -> 15fe2ea317a5, empty message
+                Traceback (most recent call last):
+                  File "d:\workspace\pweb\lib\site-packages\sqlalchemy\engine\base.py", line 1244, in _execute_context
+                    cursor, statement, parameters, context
+                  File "d:\workspace\pweb\lib\site-packages\sqlalchemy\engine\default.py", line 552, in do_execute
+                    cursor.execute(statement, parameters)
+                sqlite3.OperationalError: Cannot add a NOT NULL column with default value NULL
+
+                The above exception was the direct cause of the following exception:
+
+                Traceback (most recent call last):
+                  File "C:\Python36\lib\runpy.py", line 193, in _run_module_as_main
+                    "__main__", mod_spec)
+                  File "C:\Python36\lib\runpy.py", line 85, in _run_code
+                    exec(code, run_globals)
+                  File "D:\workspace\pweb\Scripts\flask.exe\__main__.py", line 9, in <module>
+                  File "d:\workspace\pweb\lib\site-packages\flask\cli.py", line 966, in main
+                    cli.main(prog_name="python -m flask" if as_module else None)
+                  File "d:\workspace\pweb\lib\site-packages\flask\cli.py", line 586, in main
+                    return super(FlaskGroup, self).main(*args, **kwargs)
+                  File "d:\workspace\pweb\lib\site-packages\click\core.py", line 717, in main
+                    rv = self.invoke(ctx)
+                  File "d:\workspace\pweb\lib\site-packages\click\core.py", line 1137, in invoke
+                    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                  File "d:\workspace\pweb\lib\site-packages\click\core.py", line 1137, in invoke
+                    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                  File "d:\workspace\pweb\lib\site-packages\click\core.py", line 956, in invoke
+                    return ctx.invoke(self.callback, **ctx.params)
+                  File "d:\workspace\pweb\lib\site-packages\click\core.py", line 555, in invoke
+                    return callback(*args, **kwargs)
+                  File "d:\workspace\pweb\lib\site-packages\click\decorators.py", line 17, in new_func
+                    return f(get_current_context(), *args, **kwargs)
+                  File "d:\workspace\pweb\lib\site-packages\flask\cli.py", line 426, in decorator
+                    return __ctx.invoke(f, *args, **kwargs)
+                  File "d:\workspace\pweb\lib\site-packages\click\core.py", line 555, in invoke
+                    return callback(*args, **kwargs)
+                  File "d:\workspace\pweb\lib\site-packages\flask_migrate\cli.py", line 134, in upgrade
+                    _upgrade(directory, revision, sql, tag, x_arg)
+                  File "d:\workspace\pweb\lib\site-packages\flask_migrate\__init__.py", line 95, in wrapped
+                    f(*args, **kwargs)
+                  File "d:\workspace\pweb\lib\site-packages\flask_migrate\__init__.py", line 280, in upgrade
+                    command.upgrade(config, revision, sql=sql, tag=tag)
+                  File "d:\workspace\pweb\lib\site-packages\alembic\command.py", line 276, in upgrade
+                    script.run_env()
+                  File "d:\workspace\pweb\lib\site-packages\alembic\script\base.py", line 475, in run_env
+                    util.load_python_file(self.dir, "env.py")
+                  File "d:\workspace\pweb\lib\site-packages\alembic\util\pyfiles.py", line 90, in load_python_file
+                    module = load_module_py(module_id, path)
+                  File "d:\workspace\pweb\lib\site-packages\alembic\util\compat.py", line 177, in load_module_py
+                    spec.loader.exec_module(module)
+                  File "<frozen importlib._bootstrap_external>", line 678, in exec_module
+                  File "<frozen importlib._bootstrap>", line 219, in _call_with_frames_removed
+                  File "migrations\env.py", line 96, in <module>
+                    run_migrations_online()
+                  File "migrations\env.py", line 90, in run_migrations_online
+                    context.run_migrations()
+                  File "<string>", line 8, in run_migrations
+                  File "d:\workspace\pweb\lib\site-packages\alembic\runtime\environment.py", line 839, in run_migrations
+                    self.get_context().run_migrations(**kw)
+                  File "d:\workspace\pweb\lib\site-packages\alembic\runtime\migration.py", line 362, in run_migrations
+                    step.migration_fn(**kw)
+                  File "D:\workspace\pweb\migrations\versions\15fe2ea317a5_.py", line 21, in upgrade
+                    op.add_column('follows', sa.Column('followed_id', sa.Integer(), nullable=False))
+                  File "<string>", line 8, in add_column
+                  File "<string>", line 3, in add_column
+                  File "d:\workspace\pweb\lib\site-packages\alembic\operations\ops.py", line 1904, in add_column
+                    return operations.invoke(op)
+                  File "d:\workspace\pweb\lib\site-packages\alembic\operations\base.py", line 345, in invoke
+                    return fn(self, operation)
+                  File "d:\workspace\pweb\lib\site-packages\alembic\operations\toimpl.py", line 131, in add_column
+                    operations.impl.add_column(table_name, column, schema=schema)
+                  File "d:\workspace\pweb\lib\site-packages\alembic\ddl\impl.py", line 231, in add_column
+                    self._exec(base.AddColumn(table_name, column, schema=schema))
+                  File "d:\workspace\pweb\lib\site-packages\alembic\ddl\impl.py", line 134, in _exec
+                    return conn.execute(construct, *multiparams, **params)
+                  File "d:\workspace\pweb\lib\site-packages\sqlalchemy\engine\base.py", line 988, in execute
+                    return meth(self, multiparams, params)
+                  File "d:\workspace\pweb\lib\site-packages\sqlalchemy\sql\ddl.py", line 72, in _execute_on_connection
+                    return connection._execute_ddl(self, multiparams, params)
+                  File "d:\workspace\pweb\lib\site-packages\sqlalchemy\engine\base.py", line 1050, in _execute_ddl
+                    compiled,
+                  File "d:\workspace\pweb\lib\site-packages\sqlalchemy\engine\base.py", line 1248, in _execute_context
+                    e, statement, parameters, cursor, context
+                  File "d:\workspace\pweb\lib\site-packages\sqlalchemy\engine\base.py", line 1466, in _handle_dbapi_exception
+                    util.raise_from_cause(sqlalchemy_exception, exc_info)
+                  File "d:\workspace\pweb\lib\site-packages\sqlalchemy\util\compat.py", line 398, in raise_from_cause
+                    reraise(type(exception), exception, tb=exc_tb, cause=cause)
+                  File "d:\workspace\pweb\lib\site-packages\sqlalchemy\util\compat.py", line 152, in reraise
+                    raise value.with_traceback(tb)
+                  File "d:\workspace\pweb\lib\site-packages\sqlalchemy\engine\base.py", line 1244, in _execute_context
+                    cursor, statement, parameters, context
+                  File "d:\workspace\pweb\lib\site-packages\sqlalchemy\engine\default.py", line 552, in do_execute
+                    cursor.execute(statement, parameters)
+                sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) Cannot add a NOT NULL column with default value NULL
+                [SQL: ALTER TABLE follows ADD COLUMN followed_id INTEGER NOT NULL]
+                (Background on this error at: http://sqlalche.me/e/e3q8)
+
+            manually changed 15fe2ea317a5_.py, however set down_revision wrong: down_revision = 'ad6833d9650f'
+                # revision order: ad6833d9650f -> 8aee64a56377 -> 15fe2ea317a5
+                #   !! should be 8aee64a56377 then no alembic -c migrations/alembic.ini merge heads !!
+
+            run flask db upgrade, it errors out:
+                (pweb) D:\workspace\pweb>flask db upgrade
+                    INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+                    INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+                    ERROR [root] Error: Multiple head revisions are present for given argument 'head'; please specify a specific target revision, '<branchname>@head' to narrow to a specific head, or 'hea
+                    ds' for all heads
+
+            root-cause: columns-rename works not 100% correct in flask-migrate,
+                        manual-change of migration script caused multiple heads.
+
+            fix: find out alembic.ini and update its content:
+                    D:\workspace\pweb\migrations\alembic.ini
+                    [alembic] script_location=migration
+                 change the wrong_migration_script to def upgrade():pass and def downgrade():pass ;
+                 alembic -c D:\workspace\pweb\migrations\alembic.ini merge heads ;
+                 flask db upgrade ;
+                 done.
+
+
+
 
     F) Flask-Mail: Python有标准库smtplib可发送邮件，Flask-Mail 包装了 smtplib 能更好的与Flask集成。
         Flask-Mail 连接到 Simple Mail TRanfer Protocol (SMTP)服务器，把邮件交给这个服务器发送。
