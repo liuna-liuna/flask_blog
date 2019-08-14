@@ -346,6 +346,9 @@
                          Object Relationship Mapping (ORM) 包。
                          SQLAlchemy 提供了高层ORM的功能，也提供了原生SQL的底层功能。
 
+    D.1) Flask-SQLAlchemy 配置
+        pip install flask-sqlalchemy
+
         Flask-SQLAlchemy 简化了 SQLAlchemy 在 Flask 中的应用。
         在 Flask-SQLAlchemy 中，数据库使用URL指定，如：
             MySQL:                  mysql://username:password@hostname/database
@@ -355,6 +358,7 @@
         此 URL 必须保存到 Flask 配置对象的 SQLALCHEMY_DATABASE_URI 键中。
         而且， SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    D.2) Flask-SQLAlchemy 内置对象、方法和选项
         常用的SQLAlchemy列类型：
             Integer, SmallInteger, BigInteger, Float, Numeric,
             String, Text, Unicode, UnicodeText, (db.String 需要指定长度，db.Text是变长字段，不需要指定最大长度），
@@ -367,6 +371,81 @@
         常用的SQLAlchemy关系选项，用在函数 db.relationship(...) 中：
             backref, primaryjoin, lazy, uselist（一对一时可设为False）, order_by, secondary, secondaryjoin.
 
+    D.3) Flask-SQLAlchemy 中数据库的关系如何定义
+        一对一：在一的一方用 db.relationship(..., uselist=False...)设置，
+                另一方用? (TODO)
+
+        一对多：在一的一方用 db.relationship(...)设置，
+                在多的一方用 db.ForeignKey(...)
+                Example 1vsN:
+                    class Role(db.Model):
+                        users = db.relationship('User', backref='role', lazy='dynamic')
+                        ...
+                    class User(db.Model):
+                        role_id = db.Column(db.Integer, db.ForeignKey('Role.id')
+                        ...
+
+        自引用关系：如果关系中的两侧都在同一个表中，这种关系称为自引用关系。
+                    自引用关系可以是一对一、一对多、多对多。
+
+            # ref: http://etutorials.org/SQL/Database+design+for+mere+mortals/Part+II+The+Design+Process/Chapter+10.+Table+Relationships/Types+of+Relationships/
+
+        多对多：方法1. 添加第三张表，这个表称为关联表。
+                        通过 db.Table(...) 创建关联表；
+                        在关联表两端的其中一个模型类中，
+                            通过 db.relationship(...， secondary=<connection_table>, ...) 定义关系。
+                       关系表是 SQLAlchemy 掌控的内部表，无法添加字段，如用户关注另一个用户的时间戳。
+
+                Example NvsN via connection_table: students <-> registrations <-> classes
+
+                    registration = db.Table('registration',
+                        db.Column('student_id', db.Integer, db.ForeignKey('students.id')),
+                        db.Column('class_id', db.Integer, db.ForeignKey('classes.id'))
+                    )
+
+                    class Student(db.Model):
+                        __tablename__ = 'students'
+                        id = db.Column(db.Integer, primary_key=True)
+                        name = db.Column(db.String)
+                        classes = db.relationship('SchoolClass',
+                                                  secondary=registration,
+                                                  backref=db.backref('students', lazy='dynamic'),
+                                                  lazy='dynamic')
+
+                    class SchoolClass(db.Model):
+                        __tablename__ = 'classes'
+                        id = db.Column(db.Integer, primary_key=True)
+                        name = db.Column(db.String)
+
+                    # in flask shell:
+                    >>> c = SchoolClass(name='c1')
+                    >>> s = Student('s1')
+
+                    >>> s.classes.append(c)
+                    >>> s.classes.remove(c)
+                    >>> db.session.add(s)
+                    >>> db.session.rollback()
+
+                    >>> s.classes.all()
+                    >>> c.students.all()
+
+
+                方法2. 提升关联表为一个模型，即自定义模型来起到关联表的作用。
+                        为关联表定义一个 Model，加上自定义字段；
+                        在多对多关系的两端各自定义一个一对多关系 db.relationship(...)，
+                            如果同时是自引用关系，用选项 foreign_keys=[...] 指定外键，为了消除两端两个关系各自的外键间的歧义。
+
+                    Example NvsN via model as connection_table: users <-> follows <-> users
+
+                        class Follow(db.Model):
+                            __tablename__ = 'follows'
+                            follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+                            followee_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+                            timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+
+    D.4) Flask-SQLAlchemy 增删改查
         Usage Example 1. 增删改查
             # in hello.py
             ...
@@ -462,6 +541,7 @@
                 user_role.users.order_by(User.username).all()
                 user_role.users.count()
 
+    D.5) Flask-SQLAlchemy 支持的SQL、NoSQL数据库
         MangoEngine 是 Object Document Mapping (ODM) 包。
 
         SQL数据库：关系型数据库，主键、外键、关系、实体、实体-关系图、表，记录。。。；
@@ -470,7 +550,6 @@
                     减少了表、但是数据重复；
                     放宽了对ACID范式的要求。
 
-        pip install flask-sqlalchemy
 
     E) Flask-Migrate：数据库迁移。数据库迁移工具能跟踪数据库模式的变换，然后以增量的方式把变化应用到数据库中。
         Flask中两种方法：1. 直接用 Alembic （Alembic：蒸馏器）这个迁移框架；
