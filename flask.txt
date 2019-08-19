@@ -238,6 +238,46 @@
         # ref: http://docs.jinkan.org/docs/flask/testing.html
         # ref: https://stackoverflow.com/questions/45821222/fire-multiple-requests-in-a-flask-test-request-context
 
+3.10.2) Example 2. use coverage lib to check test coverage
+
+        pip install coverage
+
+        Usage Example 1.
+            if os.environ.get('FLASK_COVERAGE'):
+                import coverage
+                COV = coverage.coverage(branch=True, include='app/*')
+                COV.start()
+
+            # set FLASK_COVERAGE env.-variable and restart self
+            if coverage and not os.environ.get('FLASK_COVERAGE'):
+                os.environ['FLASK_COVERAGE'] = '1'
+                # to fix error:
+                #   d:\workspace\pweb\scripts\python.exe: can't open file 'd:\workspace\pweb\scripts\flask':
+                #                                         [Errno 2] No such file or directory
+                #
+                sys.argv[0] += '.exe'
+                # print('[TO debug] sys.executable={}\nsys.argv={}'.format(sys.executable, sys.argv))
+                os.execvp(sys.executable, [sys.executable] + sys.argv)
+
+            # run the tests
+            import unittest
+            # ...
+
+            # check coverage
+            if COV:
+                COV.stop()
+                COV.save()
+                print('Coverage Summary:')
+                COV.report()
+                covdir = os.path.join(os.path.absdir(os.path.dirname(__file__)), 'tmp/coverage')
+                COV.html_report(directory=covdir)
+                print('HTML version: file://{}/index.html'.format(covdir))
+                COV.erase()
+
+
+
+
+
     C) FAQ:
         C.1) in sub-class of unittest.TestCase:
             either remove __init__ or in exact __init__(self, *args, **kwargs) format, otherwise:
