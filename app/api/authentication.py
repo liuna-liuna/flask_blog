@@ -39,7 +39,7 @@ def verify_password(email_or_token, password):
             g.token_used = True
         return g.current_user is not None
     # password
-    user = User.query.filter_by(email=email_or_token)
+    user = User.query.filter_by(email=email_or_token).first()
     if user is None:
         return False
     g.current_user = user
@@ -54,14 +54,14 @@ def auth_error():
 @api.before_request
 @auth.login_required
 def before_request():
-    if not g.current_user.is_anonymous() and not g.current_user.confirmed:
+    if not g.current_user.is_anonymous and not g.current_user.confirmed:
         return forbidden('Unconfirmed account.')
 
-@api.route('/posts', methods=['POST'])
+@api.route('/tokens/', methods=['POST'])
 def get_token():
-    if g.current_user.is_anonymous() or g.token_used:
+    if g.current_user.is_anonymous or g.token_used:
         return unauthorized('Invalid credentials.')
-    return jsonify({'token': g.current_user.gnerate_auth_token(expiration=600), 'expiration': 600})
+    return jsonify({'token': g.current_user.generate_auth_token(expiration=600), 'expiration': 600})
 
 # classes
 

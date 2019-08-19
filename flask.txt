@@ -1036,9 +1036,24 @@
                 ...
 
 
+    N) httpie HTTP客户端，可以用来在命令行中测试 Web 服务。
+
+        pip install httpie
+
+        !! pay attention to the / at the end of URL, could introduce rediction issue. !!
+        >>> http --json --auth santosalexandria@yahoo.com:password GET http://127.0.0.1:5000/api/v1/posts/
+            http --json --auth santosalexandria@yahoo.com:password POST http://127.0.0.1:5000/api/v1/posts/ \
+            "body=I'm adding a post form the *command line*."
+
+            http --json --auth santosalexandria@yahoo.com:password POST http://127.0.0.1:5000/api/v1/tokens/
+            http --json --auth eyJhbGciOiJIUzUxMiIsImlhdCI6MTU2NjIwNTc4NSwiZXhwIjoxNTY2MjA2Mzg1fQ.eyJpZCI6MTA3fQ.aV7Xo0jrIh10CSdYtcOtUmL_zpLFzPmqFWiVmCNWwcCd0vv0wt0II3q5G
+8lh4-0u19v2hs1bQYnfh2pSuhV6Lw: POST http://127.0.0.1:5000/api/v1/posts/ "body=I'm adding a 2nd post form the *command line*."
 
 
-    N)
+
+    O)
+
+
 
 3.13) Flask开发的大型应用的结构
 以一个blog system为例，
