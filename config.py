@@ -38,6 +38,7 @@ class Config(object):
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     NA_BLOG_POSTS_PER_PAGE = os.environ.get('NA_BLOG_POSTS_PER_PAGE') or 20
     NA_BLOG_FOLLOWERS_PER_PAGE = os.environ.get('NA_BLOG_FOLLOWERS_PER_PAGE') or 50
+    NA_BLOG_COMMENTS_PER_PAGE = os.environ.get('NA_BLOG_COMMENTS_PER_PAGE') or 20
 
     @staticmethod
     def init_app(app):
