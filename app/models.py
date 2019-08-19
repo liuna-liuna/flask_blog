@@ -18,12 +18,13 @@ __VERSION__ = "1.0.0.07282019"
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask_login import UserMixin, AnonymousUserMixin
-from flask import current_app, request
+from flask import current_app, request, jsonify, url_for
 from datetime import datetime
 import hashlib
 from markdown import markdown
 import bleach
 from . import db, login_manager
+from app.exceptions import ValidationError
 
 
 # configuration
@@ -269,6 +270,33 @@ class User(UserMixin, db.Model):
     def followed_posts(self):
         return Post.query.join(Follow, Follow.followed_id == Post.author_id).filter(Follow.follower_id == self.id)
 
+    def generate_auth_token(self, expiration=600): # 10 minutes
+        s = Serializer(current_app.config['SECRET_KEY'], expires_in=expiration)
+        return s.dumps({'id': self.id}).decode('utf-8')
+
+    @staticmethod
+    # return the verified user or None
+    def verify_auth_token(token):
+        s = Serializer(current_app.config['SECRET_KEY'])
+        try:
+            data = s.loads(token.encode('utf-8'))
+        except:
+            return False
+        return User.query.get(data['id'])
+
+    def to_json(self):
+        json_user = {
+            'url': url_for('api.get_user', id=self.id),
+            'username': self.username,
+            'member_since': self.member_since,
+            'last_seen': self.last_seen,
+            'confirmed': self.confirmed,
+            'posts_url': url_for('api.get_user_posts', id=self.id),
+            'followed_posts_url': url_for('api.get_user_followed_posts', id=self.id),
+            'posts_count': self.posts.count()
+        }
+        return json_user
+
     def __repr__(self):
         return '<User {}>: {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}'.format(
             self.username, self.id, self.username, self.name, self.email, self.role_id, self.role,
@@ -299,6 +327,25 @@ class Post(db.Model):
         target.body_html = bleach.linkify(bleach.clean(markdown(value, output_format='html'),
                                                        tags=allowed_tags, strip=True))
 
+    def to_json(self):
+        json_post = {
+            'id': self.id,
+            'body': self.body,
+            'body_html': self.body_html,
+            'author_url': url_for('api.get_user', id=self.author_id),
+            'timestamp':  self.timestamp,
+            'comments_url': self.url_for('api.get_post_comments', id=self.id),
+            'comments_count': self.comments.count()
+        }
+        return json_post
+
+    @staticmethod
+    def from_json(json_post):
+        body = json_post.get('body')
+        if body is None or body == '':
+            raise ValidationError('Post has an empty body.')
+        return Post(body=body)
+
 # configurations : set login_manager.anonymous_user, set db.event
 login_manager.anonymous_user = AnonymousUser
 db.event.listen(Post.body, 'set', Post.on_changed_body)
@@ -318,6 +365,23 @@ class Comment(db.Model):
         allowed_tags = ['a', 'abbr', 'acronym', 'b', 'code', 'em', 'i', 'strong']
         target.body_html = bleach.linkify(bleach.clean(
             markdown(value, output_format='html'), tags=allowed_tags, strip=True))
+
+    def to_json(self):
+        json_comment = {
+            'url': url_for('api.get_comment', id=self.id),
+            'body': self.body,
+            'body_html': self.body_html,
+            'post_url': url_for('api.get_post', id=self.post_id),
+            'author_url': url_for('api.get_user', id=self.author_id)
+        }
+        return json_comment
+
+    @staticmethod
+    def from_json(json_comment):
+        body = json_comment.get('body')
+        if body is None or body == '':
+            raise ValidationError('Comment has an empty body.')
+        return Comment(body=body)
 
 db.event.listen(Comment.body, 'set', Comment.on_changed_body)
 

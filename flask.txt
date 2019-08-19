@@ -196,6 +196,9 @@
 
 3.5) blueprint
 3.6) authentication
+    G) Flask-Login：管理已登陆用户的session;
+    M) Flask-HttpAuth 提供了 HTTP 身份验证协议的封装，把协议的细节隐藏在装饰器之中。
+
 3.7) database connection
 
 3.8) flash(...), get_flashed_messages()
@@ -1008,7 +1011,32 @@
 
 
 
-    M)
+    M) Flask-HttpAuth 提供了 HTTP 身份验证协议的封装，把协议的细节隐藏在装饰器之中，
+            类似于 Flask-Login 提供的 login_required 装饰器。
+
+            用 Flask-Login 实现了应用的登录功能，数据存储在用户会话中，默认情况下，Flask 把会话保存在客户端 cookie 中。
+            而 REST 架构要求无状态，如果使用 cookie，不现实，因为 Web浏览器之外的客户端很难提供对 cookie 的支持。
+
+        pip install flask_httpauth
+        app/api/authentication.py 中由 auth = HTTPBasicAuth() 实现身份验证，包括：
+            @auth.verify_password
+            # a callback function used in @auth.verify_password
+            def verify_password(email_or_token, password):
+                ...
+
+            @auth.error_handler
+            # overwrite 401 error when credentials are invalid in HttpBasicAuth
+                ...
+
+            @api.before_request
+            @auth.login_required
+                ...
+
+            @api.route('/tokens', method=['POST']
+                ...
+
+
+
 
     N)
 
@@ -1057,6 +1085,46 @@
 
         pip list
         pip freeze > requirements.txt
+
+3.14) API框架 REST
+    Rich Internet Application (RIA)：富互联网应用。在RIA中，服务器是为客户端提供数据存取服务。
+        在这种模式下，服务器变成了Web服务或API。
+    RIA 可以采用多种协议与Web服务通信，如RPC协议例如 XML-RPC，以及由其衍生的SOAP协议。
+        现在流行的Web服务的框架是 Representational State Transfer (REST)。
+
+    REST框架的6大特点：资源就是一切 + HTTP协议
+        客户端-服务器
+        无状态
+        缓存
+        接口统一
+        系统分层
+        按需编程
+    REST框架常用的编码协议：JSON、XML。JSON常用。
+
+    例子：该Blog应用的API资源
+    资源URL                       方法          说明
+    /users/<int:id>                 GET
+    /users/<int:id>/posts/          GET
+    /users/<int:id>/timeline/       GET
+    /posts/                         GET
+    /posts/                         POST
+    /posts/<int:id>                 GET
+    /posts/<int:id>                 PUT
+    /posts/<int:id>/comments/       GET
+    /posts/<int:id>/comments/       POST
+    /comments/                      GET
+    /comments/<int:id>              GET
+
+    为了保证兼容性，REST API的URL上加上版本信息：
+    例如：
+        from .api import api as api_blueprint
+        app.register_blueprint(api_blueprint, url_prefix='/api/v1')
+
+    REST框架的URL的处理函数 view functions 与 Web应用的view functions 类似，
+        REST    返回 JSON 格式的数据。
+        Web应用 渲染模板或者跳转到新页面。
+
+
 
 
 #
