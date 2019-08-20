@@ -41,22 +41,22 @@ class UserModelTestCase(unittest.TestCase):
         self.app_context.pop()
 
     def test_password_setter(self):
-        u = User(password = 'cat')
+        u = User(password='cat')
         self.assertTrue(u.password_hash is not None)
 
-    def test_password_getter(self):
+    def test_no_password_getter(self):
         u = User(password = 'cat')
         with self.assertRaises(AttributeError):
             u.password
 
-    def test_password_verify(self):
-        u = User(password = 'cat')
+    def test_password_verification(self):
+        u = User(password='cat')
         self.assertTrue(u.verify_password('cat'))
         self.assertFalse(u.verify_password('dog'))
 
     def test_password_salts_are_random(self):
-        u = User(password = 'cat')
-        u2 = User(password = 'cat')
+        u = User(password='cat')
+        u2 = User(password='cat')
         self.assertTrue(u.password_hash != u2.password_hash)
 
     def test_valid_confirmation_token(self):
@@ -83,13 +83,14 @@ class UserModelTestCase(unittest.TestCase):
         time.sleep(2)
         self.assertFalse(user.confirm(token))
 
-    @unittest.skip(reason='[TODO debug] line 91: AssertionError: False is not true')
+    # @unittest.skip(reason="[fixed: wrong systax in s.loads(token.encode('utf-8')] line 91: AssertionError: False is not true")
     def test_valid_reset_token(self):
         user = User(password='cat')
         db.session.add(user)
         db.session.commit()
         token = user.generate_reset_token()
         self.assertTrue(User.reset_password(token, 'dog'))
+        db.session.commit()
         self.assertTrue(user.verify_password('dog'))
 
     def test_invalid_reset_token(self):
@@ -229,6 +230,18 @@ class UserModelTestCase(unittest.TestCase):
         db.session.commit()
         self.assertTrue(Follow.query.count()-1 == 0)
 
-
+    def test_to_json(self):
+        u = User(email='john@example.com', password='cat')
+        db.session.add(u)
+        db.session.commit()
+        # RuntimeError: Application was not able to create a URL adapter for request independent URL generation.
+        # You might be able to fix this by setting the SERVER_NAME config variable.
+        #   to_json(...) needs an active HTTP request: it calls url_for.....
+        with self.app.test_request_context('/'):
+            json_user = u.to_json()
+        expected_keys = ['url', 'username', 'member_since', 'last_seen', 'confirmed',
+                         'posts_url', 'followed_posts_url', 'posts_count']
+        self.assertEqual(sorted(expected_keys), sorted(json_user.keys()))
+        self.assertEqual(json_user.get('url'), '/api/v1/users/{:d}'.format(u.id))
 
 # main entry

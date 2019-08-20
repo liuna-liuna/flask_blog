@@ -142,6 +142,15 @@
             response.set_cookie('answer', '42')
             return response
 
+        response.get_data(...) returns by default binary bytes, use as_text=True to convert to string.
+            def test_home_page(self):
+                response = self.client.get('/')
+                self.assertEqual(response.status_code, 200)
+                # get_data() returns by default binary bytes.
+                self.assertTrue('Stranger' in response.get_data(as_text=True))
+
+
+
     response的快捷方式：redirect(...), abort(...); abort不会把控制权交还给调用它的函数，而是抛出异常。
     Example：
         from flask import redirect
@@ -212,7 +221,10 @@
         tests = unittest.TestLoader().discover('tests') # tests/ is the directory under which test_basics.py locates.
         unittest.TextTestRunner(verbosity=2).run(tests)
 
-    B) use with app.test_request_context() to activate a temporary request context激活一个临时的请求上下文
+    B) use with app.test_request_context('/') to activate a temporary request context激活一个临时的请求上下文
+        with self.app.test_request_context('/'): fixes following errors:
+        (1) RuntimeError: Working outside of request context.
+        (2) RuntimeError: Application was not able to create a URL adapter for request independent URL generation.
 
             def test_gravatar(self):
                 user = User(email='john@example.com', password='cat')
@@ -229,6 +241,18 @@
                 self.assertTrue('r=pg' in gravatar_pg)
                 self.assertTrue('d=retro' in gravatar_retro)
 
+            def test_no_auth(self):
+                # url_for('api.get_posts') didn't work here
+                #   RuntimeError: Application was not able to create a URL adapter for request independent URL generation.
+                #   You might be able to fix this by setting the SERVER_NAME config variable.
+                # <=> with self.app.test_request_context('/'): fixed it.
+                with self.app.test_request_context('/'):
+                    response = self.client.get(url_for('api.get_posts'), content_type='application/json')
+                # .get('/api/v1/posts/'...) works too.
+                # response = self.client.get('/api/v1/posts/', content_type='application/json')
+                self.assertEqual(response.status_code, 401)
+
+
     C) use with.self.assertRaises(...):
            def test_user_password_getter(self):
                 u = User(password = 'cat')
@@ -236,12 +260,34 @@
                     u.password
 
     D) use self.app.test_client() as a testing web client:
-           .test_client() is a Flask built-in test client
-                用来解决（至少部分解决）代码严重依赖运行中的应用所创建的环境，即视图函数只能在请求上下文和运行中的应用离运行。
+           .test_client(...) is a Flask built-in test client
+                用来解决（至少部分解决）代码严重依赖运行中的应用所创建的环境，即视图函数只能在请求上下文和运行中的应用里运行。
                     如不能直接调用视图函数中的代码进行测试，因为函数需要访问Flask上下文变量如 request 或 session；
                     视图函数可能还等待接收 POST 请求中的表单数据，而视图函数可能要求用户先登录。
 
+            self.client = self.app.test_client(use_cookies=True)    # for web appliation: use use_cookies=True
+            self.client = self.app.test_client()                    # for API don't use use_cookies=True
 
+    E) HTTP status code
+        302 - redirect
+        400 - bad request
+        401 - unauthorized
+        403 - forbidden
+        404 - not found
+
+        when HTTP request failed, response has .status_code, .status, could have no data:
+            response.get_data(as_text=True) has <title><script> etc.,
+            but json.loads(response.get_data(as_text=True)) errors out.
+
+            def test_404(self):
+                response = self.client.get('/wrong/url', headers=self.get_api_headers('nouser', 'nopasswd'))
+                self.assertEqual(response.status_code, 404)
+                # for /wrong/url, response.get_data(as_text=True) has <title><script> etc., but
+                #   json.loads(response.get_data(as_text=True)) errors out:
+                #       raise JSONDecodeError("Expecting value", s, err.value) from None
+                #       json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+                # => use response.status instead, which is '404 NOT FOUND'.
+                self.assertEqual(response.status, '404 NOT FOUND')
 
 
         # ref: http://docs.jinkan.org/docs/flask/testing.html
@@ -373,6 +419,15 @@
 
             app.config['SECRET_KEY'] is needed to protect against CrossSiteRequestForgery (CSRF) attack,
                 and Flask generates token for each form and stores into session.
+
+            测试中，需要绕过 CSRF 使 POST form data 的测试容易些：WTF_CSRF_ENABLED = False
+            # in config.py:
+                class TestingConfig(Config):
+                TESTING = True
+                # to easily test forms submission in HTTP POST request: to disable CSRF token
+                WTF_CSRF_ENABLED = False
+                SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DATABASE_URL') or 'sqlite://'
+
 
             配置 SECRET_KEY 可以用 app.config['SECRET_KEY']，最好是放在环境变量里。
             # export SECRET_KEY=...
@@ -1072,6 +1127,10 @@
             # a callback function used in @auth.verify_password
             def verify_password(email_or_token, password):
                 ...
+                    when @auth.verify_password failed, it will return 401 error: Unauthorized.
+                    # issue a request with a bad token
+                    response = self.client.get('/api/v1/posts/', headers=self.get_api_headers('notoken', ''))
+                    self.assertEqual(response.status_code, 401)
 
             @auth.error_handler
             # overwrite 401 error when credentials are invalid in HttpBasicAuth

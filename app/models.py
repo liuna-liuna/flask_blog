@@ -181,7 +181,7 @@ class User(UserMixin, db.Model):
     def reset_password(token, new_password):
         s = Serializer(current_app.config['SECRET_KEY'])
         try:
-            data = s.loads(token).encode('utf-8')
+            data = s.loads(token.encode('utf-8'))
         except:
             return False
         user = User.query.get(data.get('reset'))
@@ -281,7 +281,7 @@ class User(UserMixin, db.Model):
         try:
             data = s.loads(token.encode('utf-8'))
         except:
-            return False
+            return None
         return User.query.get(data['id'])
 
     def to_json(self):
@@ -329,11 +329,11 @@ class Post(db.Model):
 
     def to_json(self):
         json_post = {
-            'id': self.id,
+            'url': url_for('api.get_post', id=self.id),
             'body': self.body,
             'body_html': self.body_html,
+            'timestamp': self.timestamp,
             'author_url': url_for('api.get_user', id=self.author_id),
-            'timestamp':  self.timestamp,
             'comments_url': url_for('api.get_post_comments', id=self.id),
             'comments_count': self.comments.count()
         }
@@ -371,6 +371,7 @@ class Comment(db.Model):
             'url': url_for('api.get_comment', id=self.id),
             'body': self.body,
             'body_html': self.body_html,
+            'timestamp': self.timestamp,
             'post_url': url_for('api.get_post', id=self.post_id),
             'author_url': url_for('api.get_user', id=self.author_id)
         }
