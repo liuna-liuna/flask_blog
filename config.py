@@ -51,6 +51,8 @@ class DevelopmentConfig(Config):
 
 class TestingConfig(Config):
     TESTING = True
+    # to easily test forms submission in HTTP POST request: to disable CSRF token
+    WTF_CSRF_ENABLED = False
     SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DATABASE_URL') or 'sqlite://'
 
 class ProductionConfig(Config):

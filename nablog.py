@@ -77,6 +77,6 @@ def test(coverage, test_names):
 
 # classes
 
-# # main entry
-# if __name__ == "__main__":
-#     app.run()
+# main entry
+if __name__ == "__main__":
+    app.run()

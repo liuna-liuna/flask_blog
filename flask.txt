@@ -229,10 +229,19 @@
                 self.assertTrue('r=pg' in gravatar_pg)
                 self.assertTrue('d=retro' in gravatar_retro)
 
-        def test_user_password_getter(self):
-            u = User(password = 'cat')
-            with self.assertRaises(AttributeError):
-                u.password
+    C) use with.self.assertRaises(...):
+           def test_user_password_getter(self):
+                u = User(password = 'cat')
+                with self.assertRaises(AttributeError):
+                    u.password
+
+    D) use self.app.test_client() as a testing web client:
+           .test_client() is a Flask built-in test client
+                用来解决（至少部分解决）代码严重依赖运行中的应用所创建的环境，即视图函数只能在请求上下文和运行中的应用离运行。
+                    如不能直接调用视图函数中的代码进行测试，因为函数需要访问Flask上下文变量如 request 或 session；
+                    视图函数可能还等待接收 POST 请求中的表单数据，而视图函数可能要求用户先登录。
+
+
 
 
         # ref: http://docs.jinkan.org/docs/flask/testing.html
