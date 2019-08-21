@@ -17,6 +17,7 @@ __VERSION__ = "1.0.0.07282019"
 # imports
 from flask import render_template, redirect, url_for, current_app, flash, request, abort, make_response
 from flask_login import current_user, login_required
+from flask_sqlalchemy import get_debug_queries
 from .forms import NameForm, EditProfileForm, EditProfileAdminForm, PostForm, CommentForm
 from . import main
 from .. import db
@@ -249,6 +250,15 @@ def server_shutdown():
         abort(500)
     shutdown()
     return 'Shutting down ...'
+
+@main.after_app_request
+def after_request(response):
+    for query in get_debug_queries():
+        if query.duration >= current_app.config['NA_BLOG_SLOW_DB_QUERY_TIME']:
+            current_app.logger.warning(
+                'Slow query:{}\nParameters: {}\nDuration: {}\nContext:{}\n'.format(
+                    query.statement, query.parameters, query.duration, query.context))
+    return response
 
 # classes
 
