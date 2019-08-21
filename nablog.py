@@ -15,7 +15,7 @@ __VERSION__ = "1.0.0.07222019"
 
 
 # imports
-from flask_migrate import Migrate
+from flask_migrate import Migrate, upgrade
 import os, click, sys
 from app import create_app, db
 from app.models import Role, User
@@ -57,10 +57,13 @@ def test(coverage, test_names):
 
     import unittest
     if test_names:
+        # when 'tests.{}'... and flask test test_api: ValueError: Empty module name
+        # tests = unittest.TestLoader().loadTestsFromNames('tests.{}'.format(test_names))
+        #
+        # it works with flask test tests.test_api
         tests = unittest.TestLoader().loadTestsFromNames(test_names)
     else:
         tests = unittest.TestLoader().discover('tests')
-    # tests = unittest.TestLoader().discover('tests')
     unittest.TextTestRunner(verbosity=2).run(tests)
 
     # check coverage
@@ -78,5 +81,7 @@ def test(coverage, test_names):
 # classes
 
 # main entry
+# when run flask test tests.test_selenium from CLI: need to enable this, because cls.app.run in thread is ignored.
 if __name__ == "__main__":
     app.run()
+

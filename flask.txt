@@ -221,6 +221,10 @@
         tests = unittest.TestLoader().discover('tests') # tests/ is the directory under which test_basics.py locates.
         unittest.TextTestRunner(verbosity=2).run(tests)
 
+        # @unittest.skip(reason='[1 extra space in index.html: Hello, john !] self.client.page_source is None after login')
+        def test_admin_home_page(self):
+            ...
+
     B) use with app.test_request_context('/') to activate a temporary request context激活一个临时的请求上下文
         with self.app.test_request_context('/'): fixes following errors:
         (1) RuntimeError: Working outside of request context.
@@ -293,6 +297,20 @@
         # ref: http://docs.jinkan.org/docs/flask/testing.html
         # ref: https://stackoverflow.com/questions/45821222/fire-multiple-requests-in-a-flask-test-request-context
 
+    F) FAQ:
+        C.1) in sub-class of unittest.TestCase:
+            either remove __init__ or in exact __init__(self, *args, **kwargs) format, otherwise:
+              TypeError: __init__() takes 1 positional argument but 2 were given
+
+        class BasicsTestCase(unittest.TestCase):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                print('[TO BE REMOVED] in __init__ function in BasicsTestCase class.')
+
+    ref: https://stackoverflow.com/questions/47445137/unittest-selenium-init-takes-1-positional-argument-but-2-were-given
+    ref: https://stackoverflow.com/questions/42790980/python-unittest-throws-uncaught-typeerror-init-takes-1-positional-argumen/42791106
+
+
 3.10.2) Example 2. use coverage lib to check test coverage
 
         pip install coverage
@@ -329,22 +347,86 @@
                 print('HTML version: file://{}/index.html'.format(covdir))
                 COV.erase()
 
+        os.execvp(...)用法：
+            sys.argv[0] += '.exe'
+            os.execvp(sys.executable, [sys.executable] + sys.argv)
+            os.execvp('mkdir', ['mkdir', '/tmp/test1/'])
+        os.system(command) 与 os.exec*(...)系列的区别：
+            os.system(command) 是在一个程序内部启动另一个程序，从而创建一个新进程
+            os.system(command) 是在 shell 中执行 command 命令，是C中 system() 的 Python 实现，
+                                具有相同的限制条件：
+                                在Unix系统中，返回值是命令执行后的退出状态，
+                                由于POSIX没有为C中 system() 的返回值指定明确的定义，
+                                所以os.system(command)的返回值依赖具体的系统，
+                                在Windows中，返回值由系统环境变量 COMSPEC 决定，此环境变量依据不同的系统版本而不同。
+            <=> 官方建议用 subprocess 模块的功能来代替此函数。
+
+        os.exec* 系列都执行一个新程序，然后用新的程序替换当前子进程的进程空间。
+                 而该子进程从新程序的main函数开始执行。
+        os.execl(path, arg0, arg1, ...)
+        os.execlp(file, arg0, arg1, ...)
+        os.execle(path, arg0, arg1, ..., env)
+        os.execlpe(file, arg0, arg1, ..., env)
+        os.execv(path, args)
+        os.execvp(file, args)
+        os.execve(path, args, env)
+        os.execvpe(file, args, env)
+            os.execl*: 参数是一个一个独立的参数传入；
+            os.execv*: 参数是 list 或者 tuple 形式；
+            os.exec*p: 从 PATH 环境变量中查找运行的executable；参数args中 args[0]是executable，args[1:]参数。
+            os.exec*e: 用给定的 env 作为默认的环境配置。env参数必须是一个 mapping， 可以是一个 dict 类型的对象。
+
+        # ref: https://www.cnblogs.com/nisen/p/6060355.html
+        # ref: https://blog.csdn.net/KWSY2008/article/details/52349836
+
+3.10.3) Example 3. use selenium as web browser
+    A) Selenium 是一个Web浏览器自动化工具，
+             可以模拟浏览器来执行在客户端浏览器中运行的JavaScript代码等；
+             可以进行自动化操作。
+             Selenium 测试是直接在浏览器中进行，要求被测试的应用运行在后台线程里的开发服务器中，Selenium运行在主线程中：
+              selenium.webdriver -> create a browser instance
+                                 -> use the browser to do testing, communicate with the application
+                                 -> close the browser instance , shutdown webdriver
+               <= 需要优雅的停止开发服务器，如Flask built-in Web Server：
+                        因为开发服务器运行在线程中，只能发送一个普通的HTTP请求停止它。
+
+    B) pip install selenium
+            download chromedriver.exe for win10 and put it to C:\chromedriver_win32\, add its_installation_path to PATH.
+
+        from selenium import webdriver
+        ...
+        # in setUpClass(cls):
+            try:
+                cls.client = webdriver.Chrome(chrome_options=options)
+                ...
+            # do testing only when a browser is started
+            if cls.client:
+                ...
+                 # start Flask web server in a thread
+                cls.server_thread = threading.Thread(target=cls.app.run, kwargs={'debug': False})
+                cls.server_thread.start()
+                ...
+        # in test_admin_home_page(self):
+            ...
+            self.client.find_element_by_link_txt(...).click()
+            self.client.find_element_by_name(...).click()
+            self.client.find_element_by_name(...).send_keys(...)
+            ...
+            self.assertIn(..., self.client.page_source)
+            ...
 
 
+    C) FAQ
+    (1) when not running nablog.py via flask ..."__main__":app.run(),
+        run flask test tests.test_selenium in CLI, got an exception:
+                C:\Python36\lib\threading.py:864: Warning: Silently ignoring app.run() because
+                the application is run from the flask command line executable.
+                Consider putting app.run() behind an if __name__ == "__main__" guard to silence this warning.
+        root-cause:
+            "This is a bug in Flask, introduced in the 1.0 release. I have filed an issue a while ago: pallets/flask#2776.
+            If you downgrade Flask to 0.12.2 this should work as expected."
 
-
-    C) FAQ:
-        C.1) in sub-class of unittest.TestCase:
-            either remove __init__ or in exact __init__(self, *args, **kwargs) format, otherwise:
-              TypeError: __init__() takes 1 positional argument but 2 were given
-
-        class BasicsTestCase(unittest.TestCase):
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs)
-                print('[TO BE REMOVED] in __init__ function in BasicsTestCase class.')
-
-    ref: https://stackoverflow.com/questions/47445137/unittest-selenium-init-takes-1-positional-argument-but-2-were-given
-    ref: https://stackoverflow.com/questions/42790980/python-unittest-throws-uncaught-typeerror-init-takes-1-positional-argumen/42791106
+        # ref: https://github.com/miguelgrinberg/flasky/issues/372
 
 
 3.11) distribution
