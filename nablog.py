@@ -78,10 +78,27 @@ def test(coverage, test_names):
         print('HTML version: file://{}/index.html'.format(covdir))
         COV.erase()
 
+@app.cli.command()
+@click.option('--length', default=25, help='Number of functions to include in the profiler report.')
+@click.option('--profile-dir', default=None, help='Directory where profiler data files are saved.')
+def profile(length, profile_dir):
+    from werkzeug.contrib.profiler import ProfilerMiddleware
+    app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[length], profile_dir=profile_dir)
+    app.run(debug=False)
+
 # classes
 
 # main entry
 # when run flask test tests.test_selenium from CLI: need to enable this, because cls.app.run in thread is ignored.
 if __name__ == "__main__":
+    # flask profile --profile-dir=./profiler doesn't work:
+    #   Warning: Silently ignoring app.run() because the application is run from the flask command line executable.
+    #       Consider putting app.run() behind an if __name__ == "__main__" guard to silence this warning.
+    #
+    # write profiling code directly behind if __name__ == "__main__" and before app.run() works.
+    #   profile_dir './tmp/profiler' must exist.
+    #
+    # from werkzeug.contrib.profiler import ProfilerMiddleware
+    # app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=['--length=15'], profile_dir='./tmp/profiler')
     app.run()
 

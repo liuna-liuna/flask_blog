@@ -1329,24 +1329,47 @@
         REST    返回 JSON 格式的数据。
         Web应用 渲染模板或者跳转到新页面。
 
-3.14) performance
-    Flask-SQLAlchemy 提供了一个选项，可以记录一次请求中与数据库查询相关的统计数据。
+3.15) performance
+    A) Flask-SQLAlchemy 提供了一个选项，可以记录一次请求中与数据库查询相关的统计数据。
                      这个功能使用 @main.after_request 调用 get_debug_queries() 实现。
 
                      get_debug_queries() 函数返回一个列表，其元素是请求中执行的查询，每个查询的属性包括：
                         statement, parameters, start_time, end_time, duration, context（查询在源码中的位置）
 
-    # in config.py:
-        SQLALCHEMY_RECORD_QUERIES = True
-        NA_BLOG_SLOW_DB_QUERY_TIME = os.environ.get('NA_BLOG_SLOW_DB_QUERY_TIME') or 0.5
-    # in app/main/views.py
-        from flask_sqlalchemy import get_debug_queries
+        # in config.py:
+            SQLALCHEMY_RECORD_QUERIES = True
+            NA_BLOG_SLOW_DB_QUERY_TIME = os.environ.get('NA_BLOG_SLOW_DB_QUERY_TIME') or 0.5
+        # in app/main/views.py
+            from flask_sqlalchemy import get_debug_queries
 
-        @main.after_request
-        def after_request(response):
-            for query in get_debug_queries:
-                ....
-            return response
+            @main.after_request
+            def after_request(response):
+                for query in get_debug_queries:
+                    ....
+                return response
+
+    B) Werkzeug 通过 ProfilerMiddleware中间件 提供了一个源码分析器，可以用来查找应用中执行最慢的部分。
+            步骤：
+            （1）定义一个CLI函数：
+                @app.cli.command()
+                @click.option('--length',...)
+                @click.option('--profile-dir'...)
+                def profile(length, profile-dir):
+                ...
+            （2）在 profile(...) 中把 ProfilerMiddleware中间件 attach to app.wsgi_app 上，然后 app.run(...).
+            （3）运行 flask profile 后，默认每条请求的分析数据会写到控制台；
+                      如果设置了 --profile-dir，数据会保存到指定目录下的一个文件中。
+
+            <=> However, flask profile --profile-dir=./profiler doesn't work:
+                    #   Warning: Silently ignoring app.run() because the application is run
+                    #       from the flask command line executable.
+                    #       Consider putting app.run() behind an if __name__ == "__main__" guard to silence this warning.
+                    #
+                write profiling code directly behind if __name__ == "__main__" and before app.run() works.
+                #   profile_dir './tmp/profiler' must exist.
+                #
+                # from werkzeug.contrib.profiler import ProfilerMiddleware
+                # app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=['--length=15'], profile_dir='./tmp/profiler')
 
 
 #
