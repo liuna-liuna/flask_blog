@@ -39,6 +39,8 @@ class Config(object):
     NA_BLOG_POSTS_PER_PAGE = os.environ.get('NA_BLOG_POSTS_PER_PAGE') or 20
     NA_BLOG_FOLLOWERS_PER_PAGE = os.environ.get('NA_BLOG_FOLLOWERS_PER_PAGE') or 50
     NA_BLOG_COMMENTS_PER_PAGE = os.environ.get('NA_BLOG_COMMENTS_PER_PAGE') or 20
+    SQLALCHEMY_RECORD_QUERIES = True
+    NA_BLOG_SLOW_DB_QUERY_TIME = os.environ.get('NA_BLOG_SLOW_DB_QUERY_TIME') or 0.5
 
     @staticmethod
     def init_app(app):
