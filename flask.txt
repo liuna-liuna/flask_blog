@@ -429,13 +429,24 @@
         # ref: https://github.com/miguelgrinberg/flasky/issues/372
 
 
-3.11) distribution
+3.11) distribution, deployment
     A) archive code into git repository
         git add ...
         git commit -m '...'
         git tag -a 10a cf73927 -m '...'
         git push --follow-tags
 
+    B) use flask deploy in CLI:
+        from flask_migrate import upgrade
+
+        @app.cli.command()
+        def deploy():
+            ...
+
+    C) logging
+        应用启动时，Flask会创建一个 Python 的 logging.Logger 类实例，并将其attach to app instance, 通过 app.logger 访问。
+        默认情况下，Debug模式下，日志记录器把日志写入控制台；生产模式中，默认情况下没有配置一个日志处理程序。
+        <=> 需要手动添加日志处理程序，如果不添加就不会保存日志。
 
 3.12) extension
     A) Flask-Bootstrap: Bootstrap是twitter开源的一个用于开发web的客户端框架，提供用户界面组件，兼容桌面和移动浏览器。
