@@ -78,6 +78,17 @@ def test(coverage, test_names):
         print('HTML version: file://{}/index.html'.format(covdir))
         COV.erase()
 
+@app.cli.command()
+def deploy():
+    # migrate db to latest version
+    # db.create_all()       # for testing config
+    upgrade()
+
+    # create or update user roles
+    Role.insert_roles()
+    # ensure all users are following themselves
+    User.add_self_follows()
+
 # classes
 
 # main entry
