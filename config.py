@@ -82,10 +82,23 @@ class ProductionConfig(Config):
         mail_handler.setLevel(logging.ERROR)
         app.logger.addHandler(mail_handler)
 
+class DockerConfig(ProductionConfig):
+    @classmethod
+    def init_app(cls, app):
+        ProductionConfig.init_app(app)
+
+        # output logs to stderr, docker logs can process them
+        import logging
+        from logging import StreamHandler
+        file_handler = StreamHandler()
+        file_handler.setLevel(logging.INFO)
+        app.logger.addHandler(file_handler)
+
 
 config = {'development': DevelopmentConfig,
           'testing': TestingConfig,
           'production': ProductionConfig,
+          'docker': DockerConfig,
           'default': DevelopmentConfig
           }
 

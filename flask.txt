@@ -448,6 +448,168 @@
         默认情况下，Debug模式下，日志记录器把日志写入控制台；生产模式中，默认情况下没有配置一个日志处理程序。
         <=> 需要手动添加日志处理程序，如果不添加就不会保存日志。
 
+    D) use docker to deploy application
+    # on win10, in cmd CLI:
+        # download Docker Desktop, install.
+        # Docker Desktop
+
+
+    # on win10, in git bash CLI:
+        docker version  # if it errored out, see docker FAQ part below.
+
+        基容器映像 是基于 Alpine Linux发行版构造的 Python映像。Alpine Linux常用于容器映像，因为它体量小。
+        macOS 和 Windows 版 Docker 能运行基于 Linux 的容器。
+
+        # create Dockfile（exec file 文件大小写敏感）, boot.sh（文件大小写敏感）, class DockerConfig,
+        # cd dockfile_directory
+        docker build -t nablog:latest .
+
+        docker images
+        docker image rm 8d59bfc95e9b
+
+        docker run --name nablog -d -p 8000:5000 \
+            -e SECRET_KEY=... \
+            -e MAIL_USERNAME=...\
+            -e MAIL_PASSWORD=... nablog:latest
+
+        docker ps
+        docker ps -a                # check exited containers too
+        docker logs 2bbe400e2ab5    # check logs, exiting reason
+        # ref: https://stackoverflow.com/questions/55260610/docker-ps-shows-empty-list-although-docker-telling-container-exists
+
+
+        docker stop container_id
+        docker rm container_id
+        # both above can integrate into docker rm container_id
+
+        # to debug
+        docker exec -it container_id sh
+
+        # in browser, open http://localhost:8000/, it works.
+
+    # docker FAQ
+        用 Docker 部署 win10 的时候出错:
+        (1) in Windows cmd CLI
+        > docker version
+        Client: Docker Engine - Community
+         Version:           19.03.1
+         API version:       1.40
+         Go version:        go1.12.5
+         Git commit:        74b1e89
+         Built:             Thu Jul 25 21:17:08 2019
+         OS/Arch:           windows/amd64
+         Experimental:      false
+        error during connect: Get http://%2F%2F.%2Fpipe%2Fdocker_engine/v1.40/version: open //./pipe/docker_engine:
+        The system cannot find the file specified. In the default daemon configuration on Windows,
+        the docker client must be run elevated to connect.
+        This error may also indicate that the docker daemon is not running.
+
+        Root-cause：
+            docker doesn't work perfectly on Windows, Windows has own docker implementation
+                using VirtualBox (use --driver, -d "virtualbox").
+
+        Fix / Workaround:
+            docker-machine ls
+            # empty, no machine, create 1 with docker-machine create
+
+            docker-machine create default1
+            # errored out
+            >docker-machine create default1
+                Creating CA: C:\Users\naliliu\.docker\machine\certs\ca.pem
+                Creating client certificate: C:\Users\naliliu\.docker\machine\certs\cert.pem
+                Running pre-create checks...
+                Error with pre-create check: "This computer is running Hyper-V.
+                VirtualBox won't boot a 64bits VM when Hyper-V is activated.
+                Either use Hyper-V as a driver, or disable the Hyper-V hypervisor.
+                (To skip this check, use --virtualbox-no-vtx-check)"
+
+            docker-machine create default1 --virtualbox-no-vtx-check
+            # errored out
+                >docker-machine create default1 --virtualbox-no-vtx-check
+                    Running pre-create checks...
+                    (default1) Image cache directory does not exist, creating it
+                        at C:\Users\naliliu\.docker\machine\cache...
+                    (default1) No default Boot2Docker ISO found locally, downloading the latest release...
+                    (default1) Latest release for github.com/boot2docker/boot2docker is v19.03.1
+                    (default1) Downloading C:\Users\naliliu\.docker\machine\cache\boot2docker.iso from
+                    https://github.com/boot2docker/boot2docker/releases/download/v19.03.1/boot2docker.iso...
+                    (default1) 0%....10%....20%....30%....40%....50%....60%....70%....80%....90%....100%
+                    Creating machine...
+                    (default1) Copying C:\Users\naliliu\.docker\machine\cache\boot2docker.iso to
+                    C:\Users\naliliu\.docker\machine\machines\default1\boot2docker.iso...
+                    (default1) Creating VirtualBox VM...
+                    (default1) Creating SSH key...
+                    (default1) Starting the VM...
+                    (default1) Check network to re-create if needed...
+                    (default1) Windows might ask for the permission to create a network adapter.
+                        Sometimes, such confirmation window is minimized in the taskbar.
+                    (default1) Found a new host-only adapter: "VirtualBox Host-Only Ethernet Adapter #2"
+                    (default1) Windows might ask for the permission to configure a network adapter.
+                        Sometimes, such confirmation window is minimized in the taskbar.
+                    (default1) Windows might ask for the permission to configure a dhcp server.
+                    Sometimes, such confirmation window is minimized in the taskbar.
+                    Error creating machine: Error in driver during machine creation:
+                        Unable to start the VM:
+                        C:\Program Files\Oracle\VirtualBox\VBoxManage.exe startvm default1 --type headless failed:
+                    VBoxManage.exe: error:  (VERR_NEM_MISSING_KERNEL_API).
+                    VBoxManage.exe: error: VT-x is not available (VERR_VMX_NO_VMX)
+                    VBoxManage.exe: error: Details: code E_FAIL (0x80004005), component ConsoleWrap, interface IConsole
+
+                    Details: 00:00:03.245217 Power up failed (vrc=VERR_VMX_NO_VMX, rc=E_FAIL (0X80004005))
+            # but Desktop Docker in GUI works, docker version in CLI works, docker run hello-world in CLI works.
+            #		"C:\Program Files\Oracle\VirtualBox\VBoxManage.exe" startvm default3 not working.
+
+                > docker version
+                    Client: Docker Engine - Community
+                     Version:           19.03.1
+                     API version:       1.40
+                     Go version:        go1.12.5
+                     Git commit:        74b1e89
+                     Built:             Thu Jul 25 21:17:08 2019
+                     OS/Arch:           windows/amd64
+                     Experimental:      false
+
+                    Server: Docker Engine - Community
+                     Engine:
+                      Version:          19.03.1
+                      API version:      1.40 (minimum version 1.12)
+                      Go version:       go1.12.5
+                      Git commit:       74b1e89
+                      Built:            Thu Jul 25 21:17:52 2019
+                      OS/Arch:          linux/amd64
+                      Experimental:     false
+                     containerd:
+                      Version:          v1.2.6
+                      GitCommit:        894b81a4b802e4eb2a91d1ce216b8817763c29fb
+                     runc:
+                      Version:          1.0.0-rc8
+                      GitCommit:        425e105d5a03fabd737a126ad93d62a9eeede87f
+                     docker-init:
+                      Version:          0.18.0
+                      GitCommit:        fec3683
+
+                >docker-machine ls
+                    NAME       ACTIVE   DRIVER       STATE     URL   SWARM   DOCKER    ERRORS
+                    default1   -        virtualbox   Stopped                 Unknown
+
+        # ref: https://github.com/docker/for-win/issues/1825
+
+        windows features:
+            Hyper-V: turn on
+            Virtual Machine Platform: turn on (not working)
+            # ref: https://superuser.com/questions/1391838/virtual-box-is-not-working-on-windows-10
+
+            （not working) After updating Windows 10 to "Fall Creators Update" I got the same issue.
+                I resolved it by the following steps:
+                Enable all features under "Hyper-V" in "Turn Windows features on or off".
+                Restart.
+                Disable all features under "Hyper-V" in "Turn Windows features on or off".
+                Restart.
+                Now VirtualBox is working again and it shows (64-bit) in its list of operating systems.
+            # ref: https://superuser.com/questions/1153470/vt-x-is-not-available-but-is-enabled-in-bios
+
+
+
 3.12) extension
     A) Flask-Bootstrap: Bootstrap是twitter开源的一个用于开发web的客户端框架，提供用户界面组件，兼容桌面和移动浏览器。
                         服务器只是提供引用了CSS、Javascript的response，
