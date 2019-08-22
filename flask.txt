@@ -467,6 +467,7 @@
 
         docker images
         docker image rm 8d59bfc95e9b
+        docker rmi  # delete an image
 
         docker run --name nablog -d -p 8000:5000 \
             -e SECRET_KEY=... \
@@ -609,7 +610,7 @@
                 Now VirtualBox is working again and it shows (64-bit) in its list of operating systems.
             # ref: https://superuser.com/questions/1153470/vt-x-is-not-available-but-is-enabled-in-bios
 
-        push docker images to docker-hub
+    # push docker images to docker-hub
         [TODO to confirm] # register in https://hub.docker.com
         # in CLI:
         docker login
@@ -620,25 +621,61 @@
         docker push <your-dockerhub-username>/nablog:latest
         docker run --name nablog -d -p 8000:5000 <your-dockerhub-username>/nablog:latest
 
-        # 使用外部数据库
-        使用Docker 容器部署有个缺点：应用默认使用SQLite数据库在容器内很难升级，因为容器一旦停止运行、数据库就不见了。
+    # 使用外部数据库
+    使用Docker 容器部署有个缺点：应用默认使用SQLite数据库在容器内很难升级，因为容器一旦停止运行、数据库就不见了。
 
-        => 在应用的容器之外托管数据库服务器，这样升级应用的时候只需换个新容器，数据库可以保留下来。
-            例如，用一个容器构建数据库：
-                docker run --name mysql -d \
-                    -e MYSQL_RANDOM_ROOT_PASSWORD=yes \
-                    -e MYSQL_DATABASE=nablog \
-                    -e MYSQL_USER=nablog -e MYSQL_PASSWORD=<database-password> mysql/mysql-server:5.7
-            <= 需要安装MySQL客户端包如 pymysql，和 MySQL数据库连接。
+    => 在应用的容器之外托管数据库服务器，这样升级应用的时候只需换个新容器，数据库可以保留下来。
+        例如，用一个容器构建数据库：
+            docker run --name mysql -d \
+                -e MYSQL_RANDOM_ROOT_PASSWORD=yes \
+                -e MYSQL_DATABASE=nablog \
+                -e MYSQL_USER=nablog -e MYSQL_PASSWORD=<database-password> mysql/mysql-server:5.7
+        <= 需要安装MySQL客户端包如 pymysql，和 MySQL数据库连接。
 
-            然后启动一个新容器运行应用：
-                docker run -d -p 8000:5000 --link mysql:dbserver \
-                    -e DATABSE_URL=mysql+pymusql://nablog:<database-password>@dbserver/nablog \
-                    -e MAIL_USERNAME=... -e MAIL_PASSWORD=... \
-                    nablog:latest
+        然后启动一个新容器运行应用：
+            docker run -d -p 8000:5000 --link mysql:dbserver \
+                -e DATABSE_URL=mysql+pymusql://nablog:<database-password>@dbserver/nablog \
+                -e MAIL_USERNAME=... -e MAIL_PASSWORD=... \
+                nablog:latest
 
-            --link <target_container_name_or_id>:<alias_of_container_in_current_container>,
-                是为了把正在启动run的容器和一个现有的容器连接起来。
+        --link <target_container_name_or_id>:<alias_of_container_in_current_container>,
+            是为了把正在启动run的容器和一个现有的容器连接起来。
+
+        MySQL容器映像把所有的数据库文件都放在一个卷中。
+            docker volume ls    # 查看
+            docker volume rm    # 删除
+            docker system prune --volumes   # 删除所有不再使用的映像或卷，和停止后依然在系统中的容器
+
+    E) use docker compose to compose containers
+        docker-compose version
+
+        Docker Compose acts similarly to Kubernetes, Apache Mesos, Docker-Swarm（并入Docker）。
+            提供编排功能。
+            例如应用需要多个容器：数据库、应用本身、消息队列或者缓存；
+                或者应用采用微服务架构，以分布式结构部署多个小型子应用，分布运行在单独的容器中；
+                或者是提供高负载或者高容错的应用需要进行伸缩，在负载均衡背后运行多个实例，等等。
+
+        Docker Compose:
+            every container is described in a configuration file e.g. docker-compose.yml,
+            docker-compose 一次性启动全部容器。
+
+            docker-compose up -d --build
+
+            docker-compose logs
+            docker-compose logs -f
+
+            docker-compose ps
+            docker-compose down
+            docker-compose rm --stop --force
+
+            docker-compose.yml： YAML格式的配置文件，以键值对、列表定义层次结构。
+
+    F) 在生成环境中使用Docker的利弊
+        利：简单、升级快、部署快、通过编排保障可靠性和伸缩性。
+        弊：不易监控和提醒（如容器不稳定时不会发出警告）；
+            日志没有长期存储机制、没有搜索和过滤功能；
+            机密信息管理不够（如事先配置好的环境变量可以通过 docker inspect 命令或API访问）。
+
 
 
 3.12) extension
