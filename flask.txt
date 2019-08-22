@@ -456,6 +456,7 @@
 
     # on win10, in git bash CLI:
         docker version  # if it errored out, see docker FAQ part below.
+        docker info
 
         基容器映像 是基于 Alpine Linux发行版构造的 Python映像。Alpine Linux常用于容器映像，因为它体量小。
         macOS 和 Windows 版 Docker 能运行基于 Linux 的容器。
@@ -608,6 +609,36 @@
                 Now VirtualBox is working again and it shows (64-bit) in its list of operating systems.
             # ref: https://superuser.com/questions/1153470/vt-x-is-not-available-but-is-enabled-in-bios
 
+        push docker images to docker-hub
+        [TODO to confirm] # register in https://hub.docker.com
+        # in CLI:
+        docker login
+
+        # 如果想登录 Docker Hub 之外的容器映像仓库，把仓库的地址作为参数传给 docker login 命令。
+        docker login <other_container_hub_repository>
+
+        docker push <your-dockerhub-username>/nablog:latest
+        docker run --name nablog -d -p 8000:5000 <your-dockerhub-username>/nablog:latest
+
+        # 使用外部数据库
+        使用Docker 容器部署有个缺点：应用默认使用SQLite数据库在容器内很难升级，因为容器一旦停止运行、数据库就不见了。
+
+        => 在应用的容器之外托管数据库服务器，这样升级应用的时候只需换个新容器，数据库可以保留下来。
+            例如，用一个容器构建数据库：
+                docker run --name mysql -d \
+                    -e MYSQL_RANDOM_ROOT_PASSWORD=yes \
+                    -e MYSQL_DATABASE=nablog \
+                    -e MYSQL_USER=nablog -e MYSQL_PASSWORD=<database-password> mysql/mysql-server:5.7
+            <= 需要安装MySQL客户端包如 pymysql，和 MySQL数据库连接。
+
+            然后启动一个新容器运行应用：
+                docker run -d -p 8000:5000 --link mysql:dbserver \
+                    -e DATABSE_URL=mysql+pymusql://nablog:<database-password>@dbserver/nablog \
+                    -e MAIL_USERNAME=... -e MAIL_PASSWORD=... \
+                    nablog:latest
+
+            --link <target_container_name_or_id>:<alias_of_container_in_current_container>,
+                是为了把正在启动run的容器和一个现有的容器连接起来。
 
 
 3.12) extension
