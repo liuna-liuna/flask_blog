@@ -13,22 +13,30 @@
 """
 __VERSION__ = "1.0.0.07222019"
 
+import os
+from dotenv import load_dotenv
 
-# imports
-from flask_migrate import Migrate, upgrade
-import os, click, sys
-from app import create_app, db
-from app.models import Role, User
-
-app = create_app(os.getenv('FLASK_CONFIG') or 'default')
-migrate = Migrate(app, db)
+# to load environment variables in .env for on premise deployment
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+if os.path.exists(dotenv_path):
+    load_dotenv(dotenv_path)
 
 # configuration
+# to track voverage
 COV = None
 if os.environ.get('FLASK_COVERAGE'):
     import coverage
     COV = coverage.coverage(branch=True, include='app/*')
     COV.start()
+
+# imports
+from flask_migrate import Migrate, upgrade
+import click, sys
+from app import create_app, db
+from app.models import Role, User
+
+app = create_app(os.getenv('FLASK_CONFIG') or 'default')
+migrate = Migrate(app, db)
 
 # consts
 

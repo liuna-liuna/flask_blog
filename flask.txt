@@ -489,6 +489,12 @@
 
         # in browser, open http://localhost:8000/, it works.
 
+        # difference between docker and docker-machine commands:
+            docker commands:            used only within a VM to manage images.
+            docker-machine commands:    used on the host to manage Linux VMs.
+
+            # ref: https://stackoverflow.com/questions/40459280/docker-cannot-start-on-windows/55459504
+
     # docker FAQ
         用 Docker 部署 win10 的时候出错:
         (1) in Windows cmd CLI
@@ -676,7 +682,15 @@
             日志没有长期存储机制、没有搜索和过滤功能；
             机密信息管理不够（如事先配置好的环境变量可以通过 docker inspect 命令或API访问）。
 
-
+    G) on premise deployment 内部部署，传统的部署在物理或虚拟服务器上，非云端。
+        可以用自动化框架如 Ansible、Chef 或 Puppet 编写一个部署脚本：
+            （1）安装数据库服务器，例如 MySQL 或 Postgres；
+            （2）安装邮件传输代理 Mail Transport Agent (MTA)，例如 Sendmail 或 Postfix；
+            （3）安装适用于生产环境的Web服务器，如 Gunicorn 或 uWSGI；
+            （4）安装一个进程监控工具，例如 Supervisor；
+            （5）启用 HTTPS，安装配置 SSL 证书；
+            （6）（可选，强烈推荐）安装前端反向代理服务器，如 nginx 或 Apache；
+            （7）提升服务器的安全性，如 安装防火墙、删除不用的软件和服务。
 
 3.12) extension
     A) Flask-Bootstrap: Bootstrap是twitter开源的一个用于开发web的客户端框架，提供用户界面组件，兼容桌面和移动浏览器。
