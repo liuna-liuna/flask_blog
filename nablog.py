@@ -89,7 +89,6 @@ def test(coverage, test_names):
 @app.cli.command()
 def deploy():
     # migrate db to latest version
-    # db.create_all()       # for testing config
     upgrade()
 
     # create or update user roles

@@ -18,7 +18,7 @@ __VERSION__ = "1.0.0.08212019"
 import unittest, threading, re, time
 from selenium import webdriver
 from app import create_app, db, fake
-from app.models import Role, Role, User
+from app.models import Role, User
 
 # configuration
 

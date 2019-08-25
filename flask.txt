@@ -5,9 +5,12 @@
 1.0) usage of decorator
     无参装饰器：两层函数
     带参装饰器：三层函数
+    如果用类来实现装饰器，无参：__init__(...) 中传入被装饰的函数，函数 __call(...) 是一层函数；
+                          带参：__init_(...) 中传入参数，函数 __call(...) 是两层函数。
+    # ref: https://mp.weixin.qq.com/s/KpveR377KifKJ7_drWxFGg
 
     Example of Usage
-        # 带参装饰器 in decorators.py
+    # 带参装饰器 in decorators.py
         from functools import wraps
         from flask import abort
         from flask_login import current_user
@@ -26,7 +29,7 @@
         def admin_required(f):
             return permission_required(Permission.ADMIN)(f)
 
-        # in other .py files
+    # in other .py files
         from flask_login import login_required
         from ..decorators import permission_required, admin_required
         from ..models import Permission
@@ -44,20 +47,42 @@
             return "For comment moderators!"
 
 1.1) usage of context
-    see also 3.10.1)B)
-    # in test_user_model.py
-    import unittest
-    from app.models import User
+    A) in test: with self.assertRaises(AttributeError):
+                with app.test_request_context('/'):
+        see also 3.10.1)B)
+        # in test_user_model.py
+            import unittest
+            from app.models import User
 
-    class UserModelTestCase(unittest.UnitTest):
-        def test_user_password_getter(self):
-            u = User(password = 'cat')
-            with self.assertRaises(AttributeError):
-                u.password
+            class UserModelTestCase(unittest.UnitTest):
+                def test_user_password_getter(self):
+                    u = User(password = 'cat')
+                    with self.assertRaises(AttributeError):
+                        u.password
+
+    B) in app: @main.app_context_processor, @app.shell_context_processor
+        # in app/main/__init__.py:
+            from ..models import Permission
+
+            # add Permission into app_context => Permission could be used in template.
+            @main.app_context_processor
+            def inject_permissions():
+                return dict(Permission=Permission)
+
+        I) shell： Flask集成了Python shell
+        # in app/nablog.py:
+            # to integrate Python shell
+            @app.shell_context_processor
+            def make_shell_context():
+                return dict(db=db, User=User, Role=Role)
+
+    C) in app: with app.app_context()
+        with app.app_context():
+            mail.send(msg)
 
 
 2. how to run
-    # on Windows, use export for Linux
+    # set on Windows, use export for Linux
         (pweb) D:\workspace\pweb> set FLASK_APP=hello.py
         (pweb) D:\workspace\pweb> flask run
         # open http://127.0.0.1:5000/ in browser.
@@ -65,6 +90,10 @@
 
         # 只接受运行flask的本机的连接
         flask run
+        # set FLASK_CONFIG=testing
+        flask test
+        flask deploy
+        flask shell
 
         # 接受同一网络中的其他计算机发送的连接
         flask run --host 0.0.0.0
@@ -79,24 +108,19 @@
 3. architecture, diagram, mechanism
 3.0) overview
     Flask: microframework, based on werkzeug and jinja2;
-           built-in wsgi.
+           built-in wsgi;
+           good routing, blueprint support.
 
     data flow:
-            request comes in <- Request obj: a LocalProxy obj, in rqx_local_stack of LocalStack type,
-                                App obj:     a LocalProxy obj, in app_local_stack of LocalStack type,
-
-         -> route,           <- @app.route(url, method=..., ...)
-                                or app.url_map_rule(url, endpoint, function).
-
+        request comes in <- Request obj: a LocalProxy obj, in rqx_local_stack of LocalStack type,
+                                App obj: a LocalProxy obj, in app_local_stack of LocalStack type,
+         -> route,       <- @app.route(url, methods=..., ...)
+                            or app.url_map_rule(url, endpoint, function).
          -> response
 
     separate business logic and presentation logic:
         business logic      <- view function
         presentation logic  <- template
-
-
-
-
 
 3.1) globals (within threads, routines)
     Flask 上下文全局变量：
@@ -107,12 +131,12 @@
 
     request attributes and methods:
         form, args, values（form和args的合集）,
-        cookies, headers, method（HEAD, OPTIONS方法由Flask自动处理）,
+        cookies, headers, methods（HEAD, OPTIONS方法由Flask自动处理）,
         files, blueprint, endpoint（处理请求的Flask端点的名称，Flask把视图函数的名称用作路由端口的名字）,
         scheme, host, remote_addr,
         path, query_string, full_path(path和query_string的合集），
-            base_url, url（baseurl和query_string的合集）,
-        environ.
+            base_url, url（base_url和query_string的合集）,
+        environ,
         get_data(), get_json(), is_secure() （是否用HTTPS）。
 
     request hook:
@@ -126,7 +150,7 @@
 
     view function and make_response(...) returns a response object.
     response attributes and methods:
-        status_code, headers, content_length, content_type,
+        status_code, status, headers, content_length, content_type,
         set_cookie(), delete_cookie(), set_data(), get_data().
     Example:
         @app.route('/')
@@ -170,9 +194,39 @@
 
 
 3.2) configuration
+    自定义了一套 Configuration Hierarchy:
+        Object -> Config
+               -> DevelopmentConfig
+               -> TestingConfig
+               -> ProductionConfig
+                    -> DockerConfig
+                    -> UnixConfig
+        用 1 dict config 定义 what config uses what class:
+            config = {'development': DevelopmentConfig,
+              'testing': TestingConfig,
+              'production': ProductionConfig,
+              'docker': DockerConfig,
+              'unix': UnixConfig,
+              'default': DevelopmentConfig
+            }
+        每个 Config 类定义属性，方法，如
+        class Config(object):
+            @staticmethod
+            def init_app(app):
+                pass
 
+        class ProductionConfig(Config):
+            @classmethod
+            def init_app(cls, app):
+                Config.init_app(app)
+                ...
+    使用：
+        如  app.config.from_object(config[config_name])
+            config[config_name].init_app(app)
 
-3.3) route
+            current_app.config['...']
+
+3.3) routing
     静态路由：'/user'：静态路由的例子；
              'static/<filename>'：Flask自动生成，例如 url_for('static', filename='css/styles.css', _external=True)，
                                   将得到http://localhost:5000/static/css/styles.css。
@@ -201,24 +255,73 @@
 
         ！！不要在不可信的值上用safe，例如用户在表单中输入的文本！！
 
-    template 支持if, for, macro定义和使用， import, 继承via block, extends, super()。
+    template 支持if, for, macro定义和使用，import, 继承via block, extends, super()。
 
 3.5) blueprint
-3.6) authentication
+    routing:  @app.route('/', methods=[...]) # or @main.route('/', methods=[...])
+                +
+              view functions;
+              <=> 必须在创建 app 之后创建。
+
+    blueprint: 和应用一样，可以定义路由和错误处理程序；
+                blueprint 可以按功能划分，相对独立：不同的功能可以写入不同的模块；
+                blueprint 定义后休眠状态，直到注册到应用之后，才真正称为应用的一部分。
+        e.g.
+            # in app/main/__init__.py:
+                from flask import Blueprint
+
+                main = Blueprint('main', __name__)
+                from . import views, errors
+
+            # in app/__init__.py:
+                from .main import main as main_blueprint
+                app.register_blueprint(main_blueprint)
+                ...
+                app.register_blueprint(auth_blueprint, url_prefix='/auth')
+
+3.6) authentication, admin
     G) Flask-Login：管理已登陆用户的session;
     M) Flask-HttpAuth 提供了 HTTP 身份验证协议的封装，把协议的细节隐藏在装饰器之中。
+    O) Flask-Admin 提供一个 admin 平台，适合于小型快速开发，例如博客、小型论坛、小型官网等等。
 
 3.7) database connection
+    D) Flask-SQLAlchemy: SQLAlchemy 是一个强大的关系型数据库框架，支持多种数据库后台。
+                     Object Relationship Mapping (ORM) 包。
+                     SQLAlchemy 提供了高层ORM的功能，也提供了原生SQL的底层功能。
+    E) Flask-Migrate：数据库迁移。数据库迁移工具能跟踪数据库模式的变换，然后以增量的方式把变化应用到数据库中。
 
 3.8) flash(...), get_flashed_messages()
+    # in view functions
+    from flask import flash
+        flash('...')
+
+    # in template e.g. app/templates/base.html:
+        {% block content %}
+        <div class="container">
+            {% for message in get_flashed_messages() %}
+            <div class="alert alert-warning">
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+                {{ message }}
+            </div>
+            {% endfor %}
+
+            {% block page_content %}{% endblock %}
+        </div>
+        {% endblock %}
 
 3.9) security
+    F) Werkzeug：计算密码的散列值并进行核对
+    H) itsdangerous：生成并核对 加密安全令牌
 
 3.10) test
 3.10.1) Example 1. use built-in unittest to do test.
     A) code-snippet
         import unittest
         tests = unittest.TestLoader().discover('tests') # tests/ is the directory under which test_basics.py locates.
+        # or
+            # it works with flask test tests.test_api
+            tests = unittest.TestLoader().loadTestsFromNames(test_names)
+
         unittest.TextTestRunner(verbosity=2).run(tests)
 
         # @unittest.skip(reason='[1 extra space in index.html: Hello, john !] self.client.page_source is None after login')
@@ -269,7 +372,7 @@
                     如不能直接调用视图函数中的代码进行测试，因为函数需要访问Flask上下文变量如 request 或 session；
                     视图函数可能还等待接收 POST 请求中的表单数据，而视图函数可能要求用户先登录。
 
-            self.client = self.app.test_client(use_cookies=True)    # for web appliation: use use_cookies=True
+            self.client = self.app.test_client(use_cookies=True)    # for web application: use use_cookies=True
             self.client = self.app.test_client()                    # for API don't use use_cookies=True
 
     E) HTTP status code
@@ -301,6 +404,9 @@
         C.1) in sub-class of unittest.TestCase:
             either remove __init__ or in exact __init__(self, *args, **kwargs) format, otherwise:
               TypeError: __init__() takes 1 positional argument but 2 were given
+
+            <= "TestCase instances take an optional keyword argument methodName;
+                I'm guessing the unittest module passes this explicitly behind the scenes at some point."
 
         class BasicsTestCase(unittest.TestCase):
             def __init__(self, *args, **kwargs):
@@ -415,7 +521,6 @@
             self.assertIn(..., self.client.page_source)
             ...
 
-
     C) FAQ
     (1) when not running nablog.py via flask ..."__main__":app.run(),
         run flask test tests.test_selenium in CLI, got an exception:
@@ -453,7 +558,6 @@
         # download Docker Desktop, install.
         # Docker Desktop
 
-
     # on win10, in git bash CLI:
         docker version  # if it errored out, see docker FAQ part below.
         docker info
@@ -462,7 +566,7 @@
         macOS 和 Windows 版 Docker 能运行基于 Linux 的容器。
 
         # create Dockfile（exec file 文件大小写敏感）, boot.sh（文件大小写敏感）, class DockerConfig,
-        # cd dockfile_directory
+        # cd Dockfile_directory
         docker build -t nablog:latest .
 
         docker images
@@ -482,7 +586,7 @@
 
         docker stop container_id
         docker rm container_id
-        # both above can integrate into docker rm container_id
+        # both above can integrate into docker rm -f container_id
 
         # to debug
         docker exec -it container_id sh
@@ -640,7 +744,7 @@
 
         然后启动一个新容器运行应用：
             docker run -d -p 8000:5000 --link mysql:dbserver \
-                -e DATABSE_URL=mysql+pymusql://nablog:<database-password>@dbserver/nablog \
+                -e DATABSE_URL=mysql+pymysql://nablog:<database-password>@dbserver/nablog \
                 -e MAIL_USERNAME=... -e MAIL_PASSWORD=... \
                 nablog:latest
 
@@ -662,7 +766,7 @@
                 或者是提供高负载或者高容错的应用需要进行伸缩，在负载均衡背后运行多个实例，等等。
 
         Docker Compose:
-            every container is described in a configuration file e.g. docker-compose.yml,
+            All containers are described in a configuration file e.g. docker-compose.yml,
             docker-compose 一次性启动全部容器。
 
             docker-compose up -d --build
@@ -707,6 +811,7 @@
             from flask-bootstrap import Bootstrap
             bootstrap = Bootstrap(app)
 
+            # copy templates of bootstrap to templates/bootstrap/
             # in templates/base.html
             {% extends bootstrap/base.html %}
 
@@ -765,14 +870,13 @@
                 WTF_CSRF_ENABLED = False
                 SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DATABASE_URL') or 'sqlite://'
 
-
             配置 SECRET_KEY 可以用 app.config['SECRET_KEY']，最好是放在环境变量里。
             # export SECRET_KEY=...
             set SECRET_KEY=...
 
         WTForms 支持的HTML标准字段：
             BooleanField, HiddenField, PasswordField, DateField, DateTimeField,
-            FileField, MutileFileField, DecimalField, IntegerField, FloatField,
+            FileField, MultipleFileField, DecimalField, IntegerField, FloatField,
             StringField, TextAreaField, RadioField, SelectField, SelectMultipleField,
             FieldList, FormField, SubmitField.
 
@@ -967,6 +1071,8 @@
 
                 query 过滤器：
                     filter(), filter_by(), order_by(), group_by(), limit(), offset()
+                        # filter(...)       条件：table1.column1 = table2.column2
+                        # filter_by(...)    条件：table1.column1 == value1
 
                 query 执行方法：
                     all(), first(), first_or_404(), get(), get_or_404(), count(), paginate()
@@ -1012,6 +1118,10 @@
                 User.query.get_or_404(id)
                 user = User.query.filter_by(username=username).first_or_404()
 
+                @property
+                def followed_posts(self):
+                    return Post.query.join(Follow, Follow.followed_id == Post.author_id).\
+                                filter(Follow.follower_id == self.id)
 
                 # str(...) 返回SQLAlchemy为查询生成的SQL查询语句。
                 print(str(User.query.filter_by(role=user_role))
@@ -1044,7 +1154,7 @@
 
     E) Flask-Migrate：数据库迁移。数据库迁移工具能跟踪数据库模式的变换，然后以增量的方式把变化应用到数据库中。
         Flask中两种方法：1. 直接用 Alembic （Alembic：蒸馏器）这个迁移框架；
-                         2. 用Flask-Migrate扩展，这个扩展时对Alemic的轻量级包装，并与flask命令做了集成。
+                         2. 用Flask-Migrate扩展，这个扩展是对Alemic的轻量级包装，并与flask命令做了集成。
 
         Flask-SQLAlchemy 在只有数据库表不存在时，才会根据模型创建。
             所以如果有数据库模型的更改，即表结构的改动，需要先删除旧表，但会丢失数据，
@@ -1100,8 +1210,6 @@
 
                     # to check current heads
                     # print('current head in db via Alembic: {}'.format(script.get_current_head()))
-
-
 
             # ref: https://stackoverflow.com/questions/28392347/failed-no-config-file-alembic-ini-found
             # ref: https://stackoverflow.com/questions/22342643/alembic-revision-multiple-heads-due-branching-error
@@ -1218,28 +1326,27 @@
                 (pweb) D:\workspace\pweb>flask db upgrade
                     INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
                     INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
-                    ERROR [root] Error: Multiple head revisions are present for given argument 'head'; please specify a specific target revision, '<branchname>@head' to narrow to a specific head, or 'hea
-                    ds' for all heads
+                    ERROR [root] Error: Multiple head revisions are present for given argument 'head';
+                    please specify a specific target revision, '<branchname>@head' to narrow to a specific head,
+                    or 'heads' for all heads
 
             root-cause: columns-rename works not 100% correct in flask-migrate,
                         manual-change of migration script caused multiple heads.
 
             fix: find out alembic.ini and update its content:
                     D:\workspace\pweb\migrations\alembic.ini
-                    [alembic] script_location=migration
+                    [alembic]
+                    script_location=migrations
                  change the wrong_migration_script to def upgrade():pass and def downgrade():pass ;
                  alembic -c D:\workspace\pweb\migrations\alembic.ini merge heads ;
                  flask db upgrade ;
                  done.
 
-
-
-
     F) Flask-Mail: Python有标准库smtplib可发送邮件，Flask-Mail 包装了 smtplib 能更好的与Flask集成。
-        Flask-Mail 连接到 Simple Mail TRanfer Protocol (SMTP)服务器，把邮件交给这个服务器发送。
-        Flask-Mail SMTP 服务器的配置和默认值：
-            MAIL_SERVER: localhost,
-            MAIL_PORT:   25,
+        Flask-Mail 连接到 Simple Mail Tranfer Protocol (SMTP)服务器，把邮件交给这个服务器发送。
+        Flask-Mail SMTP 服务器的配置和默认值， 使用 Gmail 的配置和默认值：
+            MAIL_SERVER: localhost,             smtp.googlemail.com
+            MAIL_PORT:   25,                    587
             MAIL_USE_TLS: False
             MAIL_USE_SSL: False
             MAIL_USERNAME: None
@@ -1247,7 +1354,7 @@
         上述配置可以在code中设置： app.config[...]  = ... 。
 
         MAIL_USERNAME, MAIL_PASSWORD 最好放在环境变量里。
-        NA_BLOG_ADMIN （email of amdin) 也放在环境变量里。
+        NA_BLOG_ADMIN （email of admin) 也放在环境变量里。
         # export MAIL_USERNAME =...
         set MAIL_USERNAME =...
 
@@ -1278,7 +1385,7 @@
             （2）用户输入用户名和密码，点击提交按钮。再次调用同一处理函数，不过这一次处理的是POST请求，不是GET请求。
                 a.处理函数验证通过表单提交的凭据，然后调用Flask-Login的 login_user() 函数，登入用户；
                 b.login_user() 函数把用户的ID以字符串的形式写入用户会话；
-                c.处理数重定向到首页；
+                c.处理函数重定向到首页；
 
             （3）浏览器收到重定向响应，请求首页。
                 a.调用首页的视图函数，渲染主页的 Jinja2 模板；
@@ -1397,11 +1504,27 @@
                 >>> r.has_permission(Permission.FOLLOW)
                 False
 
-
-
     H) itsdangerous：生成并核对 加密安全令牌
+        # in app/models.py:
+            from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 
-    I) shell： Flask提供了shell功能：
+            def generate_confirmation_token(self, expiration=600s): # 10 minutes
+                s = Serializer(current_app.config['SECRET_KEY'], expires_in=expiration)
+                return s.dumps({'confirm': self.id}).decode('utf-8')
+
+            def confirm(self, token):
+                s = Serializer(current_app.config['SECRET_KEY'])
+                try:
+                    data = s.loads(token.encode('utf-8'))
+                except:
+                    return False
+                if data.get('confirm') != self.id:
+                    return False
+                self.confirmed = True
+                db.session.add(self)
+                return True
+
+    I) shell： Flask集成了Python shell
         Example:
             # to integrate Python shell
             @app.shell_context_processor
@@ -1415,6 +1538,7 @@
 
         Example:
         @app.cli.command
+        @click.option('--coverage/--no-coverage', default=False, help='Run tests under code coverage.')
         @click.argument('test_names', nargs=-1)
         def test(test_names):
             ""Run the unit tests."""
@@ -1450,8 +1574,6 @@
 
         pip install flask_pagedown markdown bleach
 
-
-
     M) Flask-HttpAuth 提供了 HTTP 身份验证协议的封装，把协议的细节隐藏在装饰器之中，
             类似于 Flask-Login 提供的 login_required 装饰器。
 
@@ -1477,7 +1599,7 @@
             @auth.login_required
                 ...
 
-            @api.route('/tokens', method=['POST']
+            @api.route('/tokens', methods=['POST']
                 ...
 
 
@@ -1485,34 +1607,42 @@
 
         pip install httpie
 
-        !! pay attention to the / at the end of URL, could introduce rediction issue. !!
+        !! pay attention to the / at the end of URL, could introduce redirection issue. !!
         >>> http --json --auth santosalexandria@yahoo.com:password GET http://127.0.0.1:5000/api/v1/posts/
             http --json --auth santosalexandria@yahoo.com:password POST http://127.0.0.1:5000/api/v1/posts/ \
             "body=I'm adding a post form the *command line*."
 
             http --json --auth santosalexandria@yahoo.com:password POST http://127.0.0.1:5000/api/v1/tokens/
-            http --json --auth eyJhbGciOiJIUzUxMiIsImlhdCI6MTU2NjIwNTc4NSwiZXhwIjoxNTY2MjA2Mzg1fQ.eyJpZCI6MTA3fQ.aV7Xo0jrIh10CSdYtcOtUmL_zpLFzPmqFWiVmCNWwcCd0vv0wt0II3q5G
-8lh4-0u19v2hs1bQYnfh2pSuhV6Lw: POST http://127.0.0.1:5000/api/v1/posts/ "body=I'm adding a 2nd post form the *command line*."
+            http --json --auth eyJhbGciOiJIUzUxMiIsImlhdCI6MTU2NjIwNTc4NSwiZXhwIjoxNTY2MjA2Mzg1fQ.eyJpZCI6MTA3fQ.\
+            aV7Xo0jrIh10CSdYtcOtUmL_zpLFzPmqFWiVmCNWwcCd0vv0wt0II3q5G8lh4-0u19v2hs1bQYnfh2pSuhV6Lw: POST \
+            http://127.0.0.1:5000/api/v1/posts/ "body=I'm adding a 2nd post form the *command line*."
 
+    O) Flask-Admin 提供一个 admin 平台，适合于小型快速开发，例如博客、小型论坛、小型官网等等。
 
+        from flask_admin import Admin
+        admin = Admin(app, name='cleanblog', template_mode='bootstrap3')    # default template_mode is bootstrap2
 
-    O)
+        # could see admin page in browser via http://127.0.0.1:5005/admin/
 
+    # ref: https://segmentfault.com/a/1190000013073352
 
 
 3.13) Flask开发的大型应用的结构
 以一个blog system为例，
     配置放在 config.py中；
     程序入口在 <appname>.py 中如 nablog.py;
-    应用相关的放在 app/ 下: __init__.py, code， templates/, static/, email.py, models.py;
-                            code 在 main/ 下：main/__init__.py,
-                                              main/errors.py,
-                                              main/forms.py,
-                                              main/views.py,
-    路由提取到 blueprint 实现，在 main/__init__.py, main/errors.py, main/views.py里。
+    应用相关的放在 app/ 下: __init__.py, templates/, static/, email.py, models.py, decoratros.py, exceptions.py, faker.py;
+                            blueprint code 在 main/ 下：main/__init__.py,
+                                                        main/errors.py,
+                                                        main/forms.py,
+                                                        main/views.py,
+                                               auth/...,
+                                               api/...,
+    路由提取到 blueprint 实现，在 main/__init__.py, main/errors.py, main/views.py, auth/..., api/auth/..., api/... 里。
     数据库迁移放在 migrations/ 下；
-    单元测试放在 tests/ 下；
-    依赖包放在 requirements.txt 中；
+    单元测试放在 tests/ 下，coverage, profile 的 check 信息放在 nablog.py 中；
+    依赖包放在 requirements.txt, requirement/common.txt, requirements/... 中；
+    部署的信息放在 boot.sh, Dockerfile, .env, .env-mysql, docker-compose.yml 中；
 
     app 改为由工厂函数创建：
         def create_app(config_name):
@@ -1545,6 +1675,12 @@
 
         pip list
         pip freeze > requirements.txt
+        requirements 根据开发、产品环境的不同而不同，放在
+            requirements/common.txt,
+            requirements/dev.txt,
+            requirements/prod.txt,
+            ...
+            中。
 
 3.14) API框架 REST
     Rich Internet Application (RIA)：富互联网应用。在RIA中，服务器是为客户端提供数据存取服务。
@@ -1580,7 +1716,7 @@
         from .api import api as api_blueprint
         app.register_blueprint(api_blueprint, url_prefix='/api/v1')
 
-    REST框架的URL的处理函数 view functions 与 Web应用的view functions 类似，
+    REST框架的URL的处理函数 view functions 与 Web应用的 view functions 类似，
         REST    返回 JSON 格式的数据。
         Web应用 渲染模板或者跳转到新页面。
 
